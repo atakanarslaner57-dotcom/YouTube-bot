@@ -2,32 +2,36 @@ import os
 import google.generativeai as genai
 
 def main():
-    print("🚀 YouTube Botu Senin Modellerinle Başlatıldı!")
-    
     api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        print("❌ HATA: API Anahtarı bulunamadı!")
-        return
+    genai.configure(api_key=api_key)
+    
+    # Senin anahtarının desteklediği kesin olan model
+    model = genai.GenerativeModel('gemini-flash-latest')
+    
+    # Botun yeni "Görevi" (Prompt)
+    istek = (
+        "Sen popüler bir çocuk eğitici YouTube kanalı yazarısın. "
+        "Okul öncesi çocuklara hitap eden, 50-60 saniyelik, eğlenceli ve öğretici bir Shorts senaryosu yaz. "
+        "Konu: Hayvanlar, uzay veya doğa hakkında çok ilginç bir bilgi olsun. "
+        "Format şu olsun: \n"
+        "1. Merak uyandıran bir Soruyla başla.\n"
+        "2. Basit ve neşeli bir dille açıkla.\n"
+        "3. Sonunda çocuklara bir soru sor.\n"
+        "4. Ekran için görsel betimlemeler ekle (Örn: Ekranda zıplayan bir tavşan belirir)."
+    )
 
     try:
-        genai.configure(api_key=api_key)
-        
-        # Senin listende gördüğüm ve çalıştığı kesin olan model ismi:
-        model = genai.GenerativeModel('gemini-flash-latest')
-        
-        print("🤖 Yapay zeka fikir üretiyor...")
-        
-        response = model.generate_content("YouTube Shorts için 60 saniyelik çok ilginç bir bilgi videosu senaryosu yaz.")
+        print("👶 Çocuklar için harika bir video fikri hazırlanıyor...")
+        response = model.generate_content(istek)
         
         print("\n" + "="*40)
-        print("✨ İŞTE SENARYON ✨")
+        print("📺 YOUTUBE SHORTS SENARYOSU")
         print("="*40 + "\n")
         print(response.text)
-        print("\n" + "="*40)
-        print("✅ BAŞARIYLA TAMAMLANDI!")
+        print("\n✅ Senaryo Hazır! Şimdi bunu videoya dönüştürebilirsin.")
 
     except Exception as e:
-        print(f"❌ Bir hata oluştu: {str(e)}")
+        print(f"❌ Hata: {e}")
 
 if __name__ == "__main__":
     main()

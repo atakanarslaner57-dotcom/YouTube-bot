@@ -7,20 +7,20 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4 # v3'ten v4'e güncellendi
+      - name: Checkout
+        uses: actions/checkout@v4 # En güncel sürüm
 
       - name: Set up Python
-        uses: actions/setup-python@v5 # v4'ten v5'e güncellendi
+        uses: actions/setup-python@v5
         with:
           python-version: '3.9'
 
-      - name: Install System Dependencies
+      - name: Install System Engine
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg
 
-      - name: Install Python Packages
+      - name: Install Libraries
         run: |
           python -m pip install --upgrade pip
           pip install moviepy==1.0.3 google-generativeai gTTS
@@ -30,8 +30,8 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: python main.py
 
-      - name: Upload Final Video
-        uses: actions/upload-artifact@v4 # İŞTE BURASI! v3 olan yer v4 yapıldı.
+      - name: Save Video
+        uses: actions/upload-artifact@v4 # Hatayı çözen kritik güncelleme
         with:
-          name: YouTube-Shorts-Output
+          name: Shorts-Output
           path: final_video.mp4

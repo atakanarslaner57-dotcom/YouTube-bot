@@ -1,18 +1,25 @@
 import os
+import google.generativeai as genai
 
-def kontrol():
-    print("--- OTOMASYON SİSTEMİ BAŞLATILIYOR ---")
-    anahtarlar = {
-        "GEMINI_API_KEY": os.getenv("GEMINI_API_KEY"),
-        "YOUTUBE_CLIENT_ID": os.getenv("YOUTUBE_CLIENT_ID"),
-        "YOUTUBE_CLIENT_SECRET": os.getenv("YOUTUBE_CLIENT_SECRET")
-    }
+# 1. Ayarlar ve Bağlantılar
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+model = genai.GenerativeModel('gemini-pro')
+
+def video_fikri_uret():
+    print("🤖 Yapay zeka video konusu düşünüyor...")
+    prompt = "YouTube Shorts için çok ilginç, bilgilendirici ve merak uyandırıcı bir konu ve 60 saniyelik bir senaryo yaz."
+    cevap = model.generate_content(prompt)
+    return cevap.text
+
+def main():
+    print("🚀 YouTube Botu Başlatıldı!")
     
-    for isim, deger in anahtarlar.items():
-        if deger:
-            print(f"✅ {isim}: Bağlantı Başarılı!")
-        else:
-            print(f"❌ {isim}: EKSİK! Lütfen Settings > Secrets kısmını kontrol et.")
+    # Video içeriğini üret
+    icerik = video_fikri_uret()
+    print("\n--- ÜRETİLEN SENARYO ---\n")
+    print(icerik)
+    
+    print("\n✅ İçerik hazırlandı. Bir sonraki aşama: Video montaj ve yükleme.")
 
 if __name__ == "__main__":
-    kontrol()
+    main()

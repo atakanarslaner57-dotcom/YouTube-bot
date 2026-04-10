@@ -3,7 +3,7 @@ import google.generativeai as genai
 
 # 1. Ayarlar ve Bağlantılar
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-model = genai.GenerativeModel('gemini-pro')
+model = genai.GenerativeModel('gemini-1.5-flash')
 
 def video_fikri_uret():
     print("🤖 Yapay zeka video konusu düşünüyor...")

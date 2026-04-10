@@ -2,31 +2,25 @@ import os
 import google.generativeai as genai
 
 def main():
-    print("🚀 Bot Başlatıldı...")
-    
+    # API anahtarını GitHub'dan çek
     api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        print("❌ HATA: API Anahtarı bulunamadı!")
-        return
+    genai.configure(api_key=api_key)
 
+    print("🚀 Sistem test ediliyor...")
+    
     try:
-        genai.configure(api_key=api_key)
+        # Mevcut modelleri listele (Hatanın nedenini burada göreceğiz)
+        for m in genai.list_models():
+            if 'generateContent' in m.supported_generation_methods:
+                print(f"✅ Kullanabildiğin model: {m.name}")
         
-        # En güncel model ismini en yalın haliyle kullanıyoruz
+        # En garanti model ile deneme yap
         model = genai.GenerativeModel('gemini-1.5-flash')
+        response = model.generate_content("Merhaba, çalışıyor musun?")
+        print("\n🤖 Bot Cevabı:", response.text)
         
-        print("🤖 Yapay zeka içeriği oluşturuyor...")
-        
-        # Basit bir deneme isteği
-        response = model.generate_content("YouTube Shorts için ilginç bir bilgi yaz.")
-        
-        print("\n✨ ÜRETİLEN İÇERİK:")
-        print(response.text)
-        print("\n✅ BAŞARILI!")
-
     except Exception as e:
-        print(f"❌ Kritik Hata: {str(e)}")
-        print("\n💡 İPUCU: Eğer hala 404 alıyorsan, Google AI Studio'dan yeni bir API KEY almayı dene.")
+        print(f"❌ Hata hala devam ediyor: {e}")
 
 if __name__ == "__main__":
     main()

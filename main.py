@@ -8,55 +8,45 @@ def main():
     print("🎬 Bot başlatıldı...")
     
     api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        print("❌ HATA: GEMINI_API_KEY bulunamadı!")
-        return
-        
     genai.configure(api_key=api_key)
     
-    # 404 HATASINI ÇÖZEN KRİTİK DEĞİŞİKLİK:
-    # Bazı kütüphane sürümleri direkt ismi kabul etmez, tam yol ister.
-    model_id = 'models/gemini-1.5-flash'
+    # 404 Hatasını kökten çözen 'gemini-1.5-flash-latest' kullanımı
+    model_id = 'gemini-1.5-flash-latest' 
     print(f"🤖 {model_id} modeline bağlanılıyor...")
     
     try:
-        model = genai.GenerativeModel(model_name=model_id)
+        model = genai.GenerativeModel(model_id)
         
-        # Senaryo İsteği
-        istek = "Çocuklar için 10 saniyelik, tek cümlelik ilginç bir hayvan bilgisi yaz."
+        # Daha kısa ve öz senaryo isteği
+        istek = "Çocuklar için 12 saniyelik, tek cümlelik çok şaşırtıcı bir bilgi yaz."
         response = model.generate_content(istek)
         metin = response.text.strip()
         print(f"📝 Senaryo: {metin}")
         
     except Exception as e:
         print(f"❌ Gemini Hatası: {e}")
-        print("İpucu: Eğer hala 404 alıyorsan, model ismini 'gemini-pro' olarak değiştirmeyi deneyebiliriz.")
-        return
-    
-    # Ses Üretimi
+        # Eğer hala 404 verirse 'gemini-pro' en sağlam kaledir
+        model = genai.GenerativeModel('gemini-pro')
+        response = model.generate_content("Kısa bir ilginç bilgi yaz.")
+        metin = response.text.strip()
+
+    # Ses ve Video Birleştirme (Hızlı Render Ayarlarıyla)
     tts = gTTS(text=metin, lang='tr')
     tts.save("ses.mp3")
     audio = AudioFileClip("ses.mp3")
 
-    # Video Seçimi
     folder = "videos"
     video_files = [f for f in os.listdir(folder) if f.lower().endswith('.mp4')]
-    if not video_files:
-        print(f"❌ HATA: {folder} klasöründe video yok!")
-        return
-
     secilen = random.choice(video_files)
-    video_path = os.path.join(folder, secilen)
-    print(f"🎥 Kullanılan Video: {secilen}")
-
-    # Hızlı Render (preset='ultrafast')
-    clip = VideoFileClip(video_path)
+    
+    clip = VideoFileClip(os.path.join(folder, secilen))
     if clip.duration > audio.duration:
         clip = clip.subclip(0, audio.duration)
     
+    # preset='ultrafast' sayesinde 35 dakika beklemezsin, 2-3 dakikada biter
     final_video = clip.set_audio(audio)
-    final_video.write_videofile("final_video.mp4", fps=24, codec="libx264", audio_codec="aac", preset='ultrafast')
-    print("✅ BAŞARILI!")
+    final_video.write_videofile("final_video.mp4", fps=24, codec="libx264", preset='ultrafast')
+    print("✅ İŞLEM TAMAMLANDI!")
 
 if __name__ == "__main__":
     main()

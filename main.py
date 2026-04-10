@@ -1,33 +1,30 @@
 import os
-import google.generativeai as genai
+from google import genai
 
 def main():
-    print("🚀 YouTube Botu Yeni Nesil Bağlantı İle Başlatıldı!")
+    print("🚀 YouTube Botu En Yeni SDK ile Başlatıldı!")
     
-    # API Anahtarını Ayarla
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
-        print("❌ HATA: API Anahtarı bulunamadı!")
+        print("❌ HATA: API Anahtarı eksik!")
         return
 
     try:
-        genai.configure(api_key=api_key)
-        
-        # Model ismini en basit ve garanti haliyle yazıyoruz
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        # En yeni bağlantı yöntemi
+        client = genai.Client(api_key=api_key)
         
         print("🤖 Yapay zeka içerik üretiyor...")
-        prompt = "YouTube Shorts için 60 saniyelik, çok ilgi çekici bir bilgi videosu senaryosu yaz."
-        
-        # İçerik Üretme (En güncel komutla)
-        response = model.generate_content(prompt)
+        response = client.models.generate_content(
+            model="gemini-1.5-flash",
+            contents="YouTube Shorts için 60 saniyelik harika bir bilgi videosu senaryosu yaz."
+        )
         
         print("\n--- ÜRETİLEN SENARYO ---\n")
         print(response.text)
-        print("\n✅ İşlem başarıyla tamamlandı!")
+        print("\n✅ Başarıyla tamamlandı!")
 
     except Exception as e:
-        print(f"❌ Bir hata oluştu: {str(e)}")
+        print(f"❌ Hata: {str(e)}")
 
 if __name__ == "__main__":
     main()

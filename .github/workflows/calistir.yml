@@ -1,37 +1,24 @@
 name: YouTube Video Bot
-
 on:
   workflow_dispatch:
-
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4 # En güncel sürüm
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.9'
-
-      - name: Install System Engine
+      - name: Install System & Python Tools
         run: |
-          sudo apt-get update
-          sudo apt-get install -y ffmpeg
-
-      - name: Install Libraries
-        run: |
-          python -m pip install --upgrade pip
-          pip install moviepy==1.0.3 google-generativeai gTTS
-
+          sudo apt-get update && sudo apt-get install -y ffmpeg
+          pip install moviepy==1.0.3 gTTS requests # requests eklendi
       - name: Run Bot
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: python main.py
-
       - name: Save Video
-        uses: actions/upload-artifact@v4 # Hatayı çözen kritik güncelleme
+        uses: actions/upload-artifact@v4
         with:
           name: Shorts-Output
           path: final_video.mp4

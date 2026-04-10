@@ -1,37 +1,40 @@
 import os
 import google.generativeai as genai
+from gtts import gTTS
+from moviepy.editor import TextClip, ColorClip, AudioFileClip
 
 def main():
+    print("🎬 Tam Otomatik Video Üretimi Başladı...")
     api_key = os.getenv("GEMINI_API_KEY")
     genai.configure(api_key=api_key)
-    
-    # Senin anahtarının desteklediği kesin olan model
     model = genai.GenerativeModel('gemini-flash-latest')
+
+    # 1. Kısa ve Öz Senaryo Yazımı
+    istek = "Çocuklar için 10 saniyelik, tek cümlelik çok ilginç bir hayvan bilgisi yaz. Sadece bilgi cümlesini ver."
+    response = model.generate_content(istek)
+    metin = response.text.strip()
+    print(f"📝 Senaryo: {metin}")
+
+    # 2. Ses Dosyası Oluşturma
+    tts = gTTS(text=metin, lang='tr')
+    tts.save("ses.mp3")
+    audio = AudioFileClip("ses.mp3")
+
+    # 3. Video Oluşturma (Arka Plan ve Yazı)
+    # Shorts formatı için 1080x1920 boyutunda mavi bir ekran
+    bg = ColorClip(size=(1080, 1920), color=[0, 153, 255], duration=audio.duration)
     
-    # Botun yeni "Görevi" (Prompt)
-    istek = (
-        "Sen popüler bir çocuk eğitici YouTube kanalı yazarısın. "
-        "Okul öncesi çocuklara hitap eden, 50-60 saniyelik, eğlenceli ve öğretici bir Shorts senaryosu yaz. "
-        "Konu: Hayvanlar, uzay veya doğa hakkında çok ilginç bir bilgi olsun. "
-        "Format şu olsun: \n"
-        "1. Merak uyandıran bir Soruyla başla.\n"
-        "2. Basit ve neşeli bir dille açıkla.\n"
-        "3. Sonunda çocuklara bir soru sor.\n"
-        "4. Ekran için görsel betimlemeler ekle (Örn: Ekranda zıplayan bir tavşan belirir)."
-    )
+    # Ekrana yazıyı ekleme
+    txt = TextClip(metin, fontsize=70, color='white', method='caption', size=(900, None))
+    txt = txt.set_position('center').set_duration(audio.duration)
 
-    try:
-        print("👶 Çocuklar için harika bir video fikri hazırlanıyor...")
-        response = model.generate_content(istek)
-        
-        print("\n" + "="*40)
-        print("📺 YOUTUBE SHORTS SENARYOSU")
-        print("="*40 + "\n")
-        print(response.text)
-        print("\n✅ Senaryo Hazır! Şimdi bunu videoya dönüştürebilirsin.")
-
-    except Exception as e:
-        print(f"❌ Hata: {e}")
+    # Ses ve görüntüyü birleştirme
+    video = bg.set_audio(audio)
+    final = video.set_duration(audio.duration)
+    
+    # Videoyu kaydetme
+    final.write_videofile("final_video.mp4", fps=24, codec="libx264")
+    print("✅ Video 'final_video.mp4' olarak hazır!")
 
 if __name__ == "__main__":
     main()

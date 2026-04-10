@@ -1,52 +1,56 @@
 import os
-import random
-import requests
-from moviepy.editor import VideoFileClip, AudioFileClip
-from gtts import gTTS
+import asyncio
+import edge_tts
+import math
+from moviepy.editor import ImageClip, CompositeVideoClip, AudioFileClip, vfx
 
-def get_gemini_text(api_key):
-    # Kütüphane kullanmadan doğrudan API'ye istek atıyoruz
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
-    headers = {'Content-Type': 'application/json'}
-    payload = {
-        "contents": [{
-            "parts": [{"text": "Çocuklar için 10 saniyelik, tek cümlelik çok ilginç bir hayvan bilgisi yaz."}]
-        }]
-    }
-    
-    response = requests.post(url, headers=headers, json=payload)
-    result = response.json()
-    
-    if "candidates" in result:
-        return result["candidates"][0]["content"]["parts"][0]["text"].strip()
-    else:
-        print(f"❌ API Hatası: {result}")
-        return "Deniz analarının kalbi, beyni ve kemikleri yoktur." # Hata durumunda yedek metin
+# 1. ÜCRETSİZ SES ÜRETİCİ (Microsoft Edge TTS)
+async def generate_audio(text, voice, filename):
+    communicate = edge_tts.Communicate(text, voice)
+    await communicate.save(filename)
+    return AudioFileClip(filename)
 
-def main():
-    print("🎬 Bot başlatıldı (Saf API Modu)...")
-    api_key = os.getenv("GEMINI_API_KEY")
+# 2. RESMİ CANLANDIRAN FONKSİYON
+def create_scene(bg_resmi, karakter_resmi, ses_dosyasi, scale_factor=0.6):
+    duration = ses_dosyasi.duration
     
-    # 1. Senaryo
-    metin = get_gemini_text(api_key)
-    print(f"📝 Senaryo: {metin}")
+    # Arka Plan (assets klasöründen alır)
+    bg = ImageClip(f"assets/{bg_resmi}").set_duration(duration).resize(width=1920)
     
-    # 2. Ses Üretimi
-    tts = gTTS(text=metin, lang='tr')
-    tts.save("ses.mp3")
-    audio = AudioFileClip("ses.mp3")
+    # Karakter (assets klasöründen alır)
+    char = ImageClip(f"assets/{karakter_resmi}").set_duration(duration).resize(height=500)
+    
+    # Karakterin Yüzme Hareketi (Yumuşak salınım efekti)
+    char = char.set_position(lambda t: (
+        "center", 
+        400 + 30 * math.sin(t * 3) # Yukarı aşağı hareket
+    ))
 
-    # 3. Video Seçimi
-    video_files = [f for f in os.listdir("videos") if f.lower().endswith('.mp4')]
-    secilen = os.path.join("videos", random.choice(video_files))
+    return CompositeVideoClip([bg, char]).set_audio(ses_dosyasi)
+
+async def main():
+    # Karakter sesleri (Ücretsiz ve doğal)
+    # tr-TR-AhmetNeural (Erkek), tr-TR-EmelNeural (Kadın)
     
-    # 4. Hızlı Render
-    clip = VideoFileClip(secilen)
-    clip = clip.subclip(0, audio.duration) if clip.duration > audio.duration else clip.loop(duration=audio.duration)
+    print("🎙️ Sesler ve sahneler hazırlanıyor...")
     
-    final = clip.set_audio(audio)
-    final.write_videofile("final_video.mp4", fps=24, codec="libx264", preset='ultrafast')
-    print("✅ BAŞARILI!")
+    # 1. Sahne: Papi konuşuyor
+    s1_ses = await generate_audio("Merhaba arkadaşlar! Ben Papi. Bu mavi derinliklerde keşfedilecek çok şey var!", "tr-TR-AhmetNeural", "papi_ses.mp3")
+    sahne1 = create_scene("background.avif", "papi.avif", s1_ses)
+    
+    # 2. Sahne: Fini konuşuyor
+    s2_ses = await generate_audio("Ben de geliyorum Papi! Mercanların arasından geçmek çok eğlenceli!", "tr-TR-EmelNeural", "fini_ses.mp3")
+    sahne2 = create_scene("background.avif", "fini.avif", s2_ses)
+
+    # Videoları Birleştir
+    from moviepy.editor import concatenate_videoclips
+    final_video = concatenate_videoclips([sahne1, sahne2], method="compose")
+    
+    # Videoyu Kaydet
+    print("🎬 Video oluşturuluyor...")
+    final_video.write_videofile("ilk_cizgi_filmim.mp4", fps=24, codec="libx264")
+    print("✅ BAŞARILI: 'ilk_cizgi_filmim.mp4' hazır!")
 
 if __name__ == "__main__":
-    main()
+    # Gerekli kütüphaneyi yüklemek için: pip install edge-tts moviepy
+    asyncio.run(main())

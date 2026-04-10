@@ -1,34 +1,33 @@
 import os
 import google.generativeai as genai
 
-# Yapay Zeka Ayarları
-try:
-    genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-    # En güncel ve hızlı model olan 1.5-flash kullanıyoruz
-    model = genai.GenerativeModel('gemini-1.5-flash-latest')
+def main():
+    print("🚀 YouTube Botu Yeni Nesil Bağlantı İle Başlatıldı!")
     
-    def video_fikri_uret():
-        print("🤖 Yapay zeka video konusu düşünüyor...")
-        prompt = "YouTube Shorts için çok ilginç, bilgilendirici ve 60 saniyelik bir senaryo yaz. Başlık ve sahneler net olsun."
-        cevap = model.generate_content(prompt)
-        return cevap.text
+    # API Anahtarını Ayarla
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        print("❌ HATA: API Anahtarı bulunamadı!")
+        return
 
-    def main():
-        print("🚀 YouTube Botu Başlatıldı!")
+    try:
+        genai.configure(api_key=api_key)
         
-        # Anahtar kontrolü
-        if not os.getenv("GEMINI_API_KEY"):
-            print("❌ HATA: API Anahtarı bulunamadı!")
-            return
-
-        # İçerik üretme
-        icerik = video_fikri_uret()
+        # Model ismini en basit ve garanti haliyle yazıyoruz
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        
+        print("🤖 Yapay zeka içerik üretiyor...")
+        prompt = "YouTube Shorts için 60 saniyelik, çok ilgi çekici bir bilgi videosu senaryosu yaz."
+        
+        # İçerik Üretme (En güncel komutla)
+        response = model.generate_content(prompt)
+        
         print("\n--- ÜRETİLEN SENARYO ---\n")
-        print(icerik)
-        print("\n✅ İçerik başarıyla hazırlandı!")
+        print(response.text)
+        print("\n✅ İşlem başarıyla tamamlandı!")
 
-    if __name__ == "__main__":
-        main()
+    except Exception as e:
+        print(f"❌ Bir hata oluştu: {str(e)}")
 
-except Exception as e:
-    print(f"❌ Bir hata oluştu: {e}")
+if __name__ == "__main__":
+    main()

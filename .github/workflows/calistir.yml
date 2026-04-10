@@ -1,24 +1,35 @@
-name: YouTube Video Bot
+name: YouTube Video Botu
+
 on:
-  workflow_dispatch:
+  workflow_dispatch: # Manuel başlatma butonu için
+
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Kodları Çek (Checkout)
+        uses: actions/checkout@v4
+
+      - name: Python Kurulumu
+        uses: actions/setup-python@v5
         with:
           python-version: '3.9'
-      - name: Install System & Python Tools
+
+      - name: Kütüphaneleri Yükle (ZORUNLU)
         run: |
-          sudo apt-get update && sudo apt-get install -y ffmpeg
-          pip install moviepy==1.0.3 gTTS requests # requests eklendi
-      - name: Run Bot
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          # Eğer dosya okunmazsa diye manuel yükleme komutu ekliyorum:
+          pip install moviepy edge-tts requests
+
+      - name: Botu Çalıştır
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: python main.py
-      - name: Save Video
+
+      - name: Videoyu Kaydet (Artifact)
         uses: actions/upload-artifact@v4
         with:
-          name: Shorts-Output
-          path: final_video.mp4
+          name: cizgi-film-videosu
+          path: ilk_cizgi_filmim.mp4

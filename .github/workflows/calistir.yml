@@ -10,9 +10,19 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - name: Video Sistemini Kur
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
       - name: Kutuphaneleri Yukle
-        run: pip install -q -U google-generativeai
+        run: |
+          pip install -q -U google-generativeai gTTS moviepy
       - name: Botu Tetikle
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: python main.py
+      - name: Videoyu Kaydet
+        uses: actions/upload-artifact@v4
+        with:
+          name: uretilen-video
+          path: final_video.mp4

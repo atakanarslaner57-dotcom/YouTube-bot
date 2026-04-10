@@ -10,13 +10,14 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Video Sistemini Kur
+      - name: Video Sistem Gereksinimleri
         run: |
           sudo apt-get update
-          sudo apt-get install -y ffmpeg
+          sudo apt-get install -y ffmpeg imagemagick
       - name: Kutuphaneleri Yukle
         run: |
-          pip install -q -U google-generativeai gTTS moviepy
+          pip install -q -U google-generativeai gTTS 
+          pip install -q moviepy==1.0.3  # Hata vermeyen sabit sürüm
       - name: Botu Tetikle
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}

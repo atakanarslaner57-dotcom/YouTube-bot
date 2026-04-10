@@ -1,67 +1,49 @@
 import os
 import random
-import google.generativeai as genai
 from moviepy.editor import VideoFileClip, AudioFileClip
+import google.generativeai as genai
 from gtts import gTTS
 
 def main():
-    print("🎬 Bot başlatıldı...")
+    print("🎬 İşlem başlıyor...")
     
-    # 1. API Ayarı ve Model Tanımlama
+    # API ve Model (models/ ekledik)
     api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        print("❌ HATA: GEMINI_API_KEY bulunamadı!")
-        return
-        
     genai.configure(api_key=api_key)
-    
-    # 404 hatasını önlemek için tam model yolu kullanıyoruz
-    model_name = 'models/gemini-1.5-flash'
-    print(f"🤖 {model_name} modeline bağlanılıyor...")
-    model = genai.GenerativeModel(model_name)
+    model = genai.GenerativeModel('models/gemini-1.5-flash')
 
-    # 2. Senaryo Yazımı
-    try:
-        istek = "Çocuklar için 15 saniyelik çok ilginç bir hayvan bilgisi yaz. Sadece seslendirme metni olsun."
-        response = model.generate_content(istek)
-        metin = response.text.strip()
-        print(f"📝 Senaryo hazır: {metin[:50]}...")
-    except Exception as e:
-        print(f"❌ Gemini Hatası: {e}")
-        return
+    # 1. Kısa ve Öz Senaryo (Render süresini kısaltmak için)
+    response = model.generate_content("Çocuklar için 10 saniyelik, tek cümlelik çok ilginç bir bilgi yaz.")
+    metin = response.text.strip()
+    print(f"📝 Senaryo: {metin}")
     
-    # 3. Ses Dosyası Oluşturma
+    # 2. Ses
     tts = gTTS(text=metin, lang='tr')
     tts.save("ses.mp3")
     audio = AudioFileClip("ses.mp3")
 
-    # 4. Video Klasörü ve Dosya Kontrolü
-    folder = "videos"
-    if not os.path.exists(folder):
-        print(f"❌ HATA: '{folder}' klasörü ana dizinde bulunamadı!")
+    # 3. Klasör Kontrolü
+    video_list = [f for f in os.listdir("videos") if f.lower().endswith(".mp4")]
+    if not video_list:
+        print("❌ HATA: videos klasörü boş!")
         return
+        
+    secilen_video = os.path.join("videos", random.choice(video_list))
+    print(f"🎥 Seçilen dosya: {secilen_video}")
 
-    video_files = [f for f in os.listdir(folder) if f.lower().endswith('.mp4')]
-    if not video_files:
-        print(f"❌ HATA: '{folder}' içinde .mp4 dosyası yok! Mevcutlar: {os.listdir(folder)}")
-        return
-
-    secilen = random.choice(video_files)
-    video_path = os.path.join(folder, secilen)
-    print(f"🎥 Seçilen Video: {secilen}")
-
-    # 5. Video Montaj
-    clip = VideoFileClip(video_path)
+    # 4. Hızlı Render Ayarları
+    clip = VideoFileClip(secilen_video)
     
-    # Videoyu sese göre ayarla (Döngü veya Kesme)
-    if clip.duration < audio.duration:
-        clip = clip.loop(duration=audio.duration)
-    else:
+    # Eğer video sesten kısaysa sadece o kadarını kullan (loop riskine girmeyelim)
+    # Eğer video uzunsa ses kadar kes
+    if clip.duration > audio.duration:
         clip = clip.subclip(0, audio.duration)
     
-    final_video = clip.set_audio(audio)
-    final_video.write_videofile("final_video.mp4", fps=24, codec="libx264", audio_codec="aac")
-    print("✅ VİDEO BAŞARIYLA OLUŞTURULDU!")
+    final = clip.set_audio(audio)
+    
+    # preset='ultrafast' ekledik: Kaliteden biraz ödün verip 10 kat hızlı bitirir
+    final.write_videofile("final_video.mp4", fps=24, codec="libx264", preset='ultrafast')
+    print("✅ BİTTİ!")
 
 if __name__ == "__main__":
     main()

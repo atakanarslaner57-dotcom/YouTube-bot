@@ -7,52 +7,45 @@ from gtts import gTTS
 def main():
     print("🎬 Video Üretimi Başladı...")
     
-    # API Kurulumu
     api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        print("❌ HATA: GEMINI_API_KEY eksik!")
+        return
+        
     genai.configure(api_key=api_key)
     model = genai.GenerativeModel('gemini-1.5-flash')
 
-    # 1. Gemini'den Hikaye Al
-    response = model.generate_content("Çocuklar için 15 saniyelik bir ilginç bilgi yaz. Sadece seslendirme metni.")
+    # 1. Senaryo
+    response = model.generate_content("Çocuklar için 15 saniyelik çok ilginç bir hayvan bilgisi yaz. Sadece seslendirme metni.")
     metin = response.text.strip()
     print(f"📝 Senaryo: {metin}")
     
-    # 2. Ses Üret
+    # 2. Ses
     tts = gTTS(text=metin, lang='tr')
     tts.save("ses.mp3")
     audio = AudioFileClip("ses.mp3")
 
-    # 3. Klasör ve Video Kontrolü
-    video_folder = "videos"
-    if not os.path.exists(video_folder):
-        print(f"❌ HATA: '{video_folder}' klasörü bulunamadı!")
+    # 3. Klasör Kontrolü (Hata ayıklama eklendi)
+    folder = "videos"
+    if not os.path.exists(folder):
+        print(f"❌ HATA: '{folder}' klasörü bulunamadı!")
         return
 
-    video_files = [f for f in os.listdir(video_folder) if f.lower().endswith('.mp4')]
-    
-    if not video_files:
-        print(f"❌ HATA: '{video_folder}' klasörü boş veya .mp4 dosyası yok!")
-        # Klasördeki her şeyi yazdır (Hata ayıklama için)
-        print("Klasör içeriği:", os.listdir(video_folder))
+    files = [f for f in os.listdir(folder) if f.lower().endswith('.mp4')]
+    if not files:
+        print(f"❌ HATA: '{folder}' içinde mp4 yok! Mevcut dosyalar: {os.listdir(folder)}")
         return
 
-    secilen = random.choice(video_files)
-    video_path = os.path.join(video_folder, secilen)
-    print(f"🎥 Kullanılan Video: {secilen}")
+    secilen = random.choice(files)
+    print(f"🎥 Seçilen Video: {secilen}")
 
-    # 4. Video Montaj
-    clip = VideoFileClip(video_path)
-    
-    # Süre Ayarı (Döngü veya Kesme)
-    if clip.duration < audio.duration:
-        clip = clip.loop(duration=audio.duration)
-    else:
-        clip = clip.subclip(0, audio.duration)
+    # 4. Montaj
+    clip = VideoFileClip(os.path.join(folder, secilen))
+    clip = clip.loop(duration=audio.duration) if clip.duration < audio.duration else clip.subclip(0, audio.duration)
     
     final = clip.set_audio(audio)
-    # Hata vermemesi için codec ayarları eklendi
-    final.write_videofile("final_video.mp4", fps=24, codec="libx264", audio_codec="aac", temp_audiofile='temp-audio.m4a', remove_temp=True)
-    print("✅ Video başarıyla oluşturuldu!")
+    final.write_videofile("final_video.mp4", fps=24, codec="libx264", audio_codec="aac")
+    print("✅ BAŞARILI!")
 
 if __name__ == "__main__":
     main()

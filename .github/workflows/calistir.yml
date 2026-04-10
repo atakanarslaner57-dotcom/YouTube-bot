@@ -14,22 +14,18 @@ jobs:
         with:
           python-version: '3.9'
 
-      - name: Install FFmpeg (Görüntü Motoru)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ffmpeg
-
-      - name: Install Libraries (Zorunlu Kurulum)
+      - name: Zorunlu Kütüphane Kurulumu
         run: |
           python -m pip install --upgrade pip
           pip install moviepy==1.0.3 google-generativeai gTTS
+          sudo apt-get update && sudo apt-get install -y ffmpeg
 
-      - name: Run Bot
+      - name: Botu Calistir
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: python main.py
 
-      - name: Upload Video
+      - name: Videoyu Yukle
         uses: actions/upload-artifact@v3
         with:
           name: Shorts-Output

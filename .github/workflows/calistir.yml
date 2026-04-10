@@ -1,29 +1,38 @@
-name: Botu Calistir
-on: workflow_dispatch
+name: YouTube Video Bot
+
+on:
+  workflow_dispatch: # Manuel olarak başlatmanı sağlar
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
-      - name: Python Kur
-        uses: actions/setup-python@v5
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
-      - name: Video Sistem Gereksinimleri
+          python-version: '3.9'
+
+      - name: Install System Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y ffmpeg imagemagick
-      - name: Kutuphaneleri Yukle
+          sudo apt-get install -y ffmpeg # Video işleme için şart
+
+      - name: Install Python Dependencies
         run: |
-          pip install -q -U google-generativeai gTTS 
-          pip install -q moviepy==1.0.3  # Hata vermeyen sabit sürüm
-      - name: Botu Tetikle
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Run Bot
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: python main.py
-      - name: Videoyu Kaydet
-        uses: actions/upload-artifact@v4
+
+      - name: Upload Final Video
+        uses: actions/upload-artifact@v3
         with:
-          name: uretilen-video
+          name: YouTube-Shorts-Video
           path: final_video.mp4

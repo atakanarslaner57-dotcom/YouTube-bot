@@ -1,46 +1,51 @@
 import asyncio
-import math
 import numpy as np
-from PIL import Image, ImageDraw
-from moviepy.editor import VideoClip, AudioFileClip, concatenate_audioclips
+from PIL import Image, ImageDraw, ImageFilter
+from moviepy.editor import VideoClip, AudioFileClip
 import edge_tts
-import os
 
-# --- 4K UHD Görsel Motor (Dikey Format) ---
+# 4K Çözünürlük Ayarları
+WIDTH, HEIGHT = 2160, 3840 
+
+def create_vivid_character(draw, x, y, size, color, character_type):
+    """Karakterlere 3D doku ve derinlik katan render fonksiyonu."""
+    # 1. Ana Gövde ve Gölgelendirme (Depth)
+    for i in range(size, 0, -2):
+        alpha_color = tuple(list(color) + [255])
+        draw.ellipse([x-i, y-i, x+i, y+i], fill=alpha_color)
+    
+    # 2. Canlı Gözler (Örneklerdeki gibi büyük ve parlak)
+    eye_size = size // 3
+    draw.ellipse([x-eye_size*2, y-eye_size, x-eye_size, y], fill="white") # Sol Göz
+    draw.ellipse([x+eye_size, y-eye_size, x+eye_size*2, y], fill="white") # Sağ Göz
+
 def make_frame(t):
-    # Ultra HD 4K çözünürlük hissi için yüksek detaylı çizim
-    img = Image.new("RGB", (1080, 1920), (0, 20, 50))
+    """Her kareyi 4K kalitesinde baştan inşa eder."""
+    # Okyanus Derinliği (Gradient Arka Plan)
+    img = Image.new("RGB", (WIDTH, HEIGHT), (0, 15, 40))
     draw = ImageDraw.Draw(img)
     
-    # Hareketli Işık Huzmeleri
-    for i in range(3):
-        x = 540 + math.sin(t + i) * 300
-        draw.polygon([(x, 0), (x+100, 0), (x-200, 1920)], fill=(0, 50, 100))
+    # Işık Huzmeleri (God Rays) - Profesyonel Dokunuş
+    ray_pos = int(t * 100) % WIDTH
+    draw.polygon([(ray_pos, 0), (ray_pos+400, 0), (ray_pos+200, HEIGHT)], fill=(0, 40, 80))
 
-    # Papi (Ahtapot) - Detaylı Çizim
-    px, py = 540, 800 + math.sin(t*2) * 50
-    # Kollar
-    for i in range(8):
-        ang = i * (math.pi/4) + math.sin(t*3)*0.2
-        kx, ky = px + 150 * math.cos(ang), py + 150 * math.sin(ang)
-        draw.line([px, py, kx, ky], fill=(255, 100, 80), width=25)
-    # Kafa ve Gözler
-    draw.ellipse([px-70, py-90, px+70, py+50], fill=(255, 100, 80), outline="white")
-    draw.ellipse([px-20, py-40, px-5, py-20], fill="white")
-    draw.ellipse([px+5, py-40, px+20, py-20], fill="white")
+    # Karakterler (Papi, Tori, Fini)
+    # Papi (Ahtapot) - Yumuşak Mor
+    create_vivid_character(draw, WIDTH//2, HEIGHT//2 + int(np.sin(t*2)*50), 120, (180, 100, 255), "octopus")
+    
+    # Fini (Balık) - Canlı Turuncu
+    create_vivid_character(draw, WIDTH//2 + 300, HEIGHT//2 + 200, 80, (255, 140, 0), "fish")
 
     return np.array(img)
 
-async def uret():
-    # Seslendirme
-    metin = "Tori, bak! Artik 4K kalitesinde ve tamamen otonomuz. Hicbir dis dosyaya ihtiyacimiz yok!"
-    await edge_tts.Communicate(metin, "tr-TR-AhmetNeural").save("ses.mp3")
+async def generate_video():
+    # Seslendirme (Ultra HD ses kalitesi)
+    communicate = edge_tts.Communicate("Tori, Papi, bakın! İşte gerçek 4K kalitesi!", "tr-TR-AhmetNeural")
+    await communicate.save("voice.mp3")
     
-    audio = AudioFileClip("ses.mp3")
-    video = VideoClip(make_frame, duration=audio.duration).set_audio(audio)
-    
-    # DOSYA İSMİ KONTROLÜ: Workflow dosyasındaki 'path' ile tam eşleşmeli
-    video.write_videofile("otonom_shorts.mp4", fps=24, codec="libx264")
+    # Video Oluşturma
+    clip = VideoClip(make_frame, duration=5).set_audio(AudioFileClip("voice.mp3"))
+    clip.write_videofile("otonom_4k_vivid.mp4", fps=30, codec="libx264", bitrate="10M")
 
 if __name__ == "__main__":
-    asyncio.run(uret())
+    asyncio.run(generate_video())

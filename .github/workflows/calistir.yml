@@ -1,4 +1,4 @@
-name: Tam Otonom Cizgi Film Botu
+name: Tam Otonom Cizgi Film Botu - Senkronize Altyazi
 
 on:
   workflow_dispatch:
@@ -9,18 +9,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
+      - name: Python Kur
         with:
           python-version: '3.10'
 
-      - name: Gerekli Paketleri Yukle
+      - name: Gerekli Paketleri Yukle (System ve Python)
         run: |
-          pip install moviepy==1.0.3 edge-tts Pillow numpy
+          sudo apt-get update
+          sudo apt-get install -y imagemagick
+          pip install moviepy==1.0.3 edge-tts Pillow numpy espeak-ng
 
       - name: Videoyu Uret
         run: python main.py
 
-      - name: Videoyu Indirilebilir Yap
+      - name: Videoyu Indirilebilir Yap (Cikti: otonom_shorts.mp4)
         uses: actions/upload-artifact@v4
         with:
-          name: Cizgi-Film-Shorts
+          name: Otonom-Shorts
           path: otonom_shorts.mp4

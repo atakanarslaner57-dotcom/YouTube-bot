@@ -1,35 +1,54 @@
-import os
 import asyncio
 import math
-from moviepy.editor import ColorClip, CompositeVideoClip, AudioFileClip, concatenate_audioclips
+from moviepy.editor import ColorClip, CompositeVideoClip, AudioFileClip, TextClip, concatenate_audioclips
 import edge_tts
 
+async def uret_sesler():
+    # Karakterler ve replikleri
+    diyaloglar = [
+        ("Papi", "Selam Tori! YouTube dünyasına dikey bir giriş yaptık, harika görünüyoruz!", "tr-TR-AhmetNeural", "+15Hz"),
+        ("Tori", "Acele etme Papi... Derin suların huzuru, her ekrana sığar.", "tr-TR-EmelNeural", "-10Hz"),
+        ("Fini", "Hey, ben de buradayım! Hadi mercanların arasına kaçalım!", "tr-TR-EmelNeural", "+25Hz")
+    ]
+    
+    ses_dosyalari = []
+    for i, (isim, metin, ses, perde) in enumerate(diyaloglar):
+        dosya = f"ses_{i}.mp3"
+        comm = edge_tts.Communicate(metin, ses, pitch=perde)
+        await comm.save(dosya)
+        ses_dosyalari.append(AudioFileClip(dosya))
+    
+    return concatenate_audioclips(ses_dosyalari)
+
+def karakter_yap(renk, boy, isim):
+    # Basit bir renk bloğunu karakterimiz olarak tanımlıyoruz
+    return ColorClip(size=(boy, boy), color=renk).set_duration(10)
+
 async def main():
-    # 1. Seslendirme (İki farklı karakter tonu)
-    papi_text = "Selam Tori! YouTube Shorts dünyasına hoş geldin, her şey ne kadar dikey!"
-    tori_text = "Sakin ol Papi... Derin suların bilgeliği her formata sığar."
-    
-    await edge_tts.Communicate(papi_text, "tr-TR-AhmetNeural", pitch="+15Hz", rate="+15%").save("papi.mp3")
-    await edge_tts.Communicate(tori_text, "tr-TR-EmelNeural", pitch="-10Hz", rate="-5%").save("tori.mp3")
+    print("🚀 Animasyon motoru baslatiliyor...")
+    final_audio = await uret_sesler()
+    sure = final_audio.duration
 
-    audio = concatenate_audioclips([AudioFileClip("papi.mp3"), AudioFileClip("tori.mp3")])
+    # Arka Plan: Koyu Lacivert Deniz (1080x1920)
+    bg = ColorClip(size=(1080, 1920), color=(0, 20, 50)).set_duration(sure)
 
-    # 2. Görsel Katmanlar (1080x1920 Shorts Boyutu)
-    # Arka Plan: Koyu Mavi Deniz
-    bg = ColorClip(size=(1080, 1920), color=(0, 45, 90)).set_duration(audio.duration)
-    
-    # Karakterler (Görsel yoksa renkli bloklar/daireler olarak canlandırılır)
-    # Papi (Ahtapot - Kırmızımsı)
-    papi = ColorClip(size=(400, 400), color=(255, 80, 80)).set_duration(audio.duration)
-    papi = papi.set_position(lambda t: ('center', 700 + 40 * math.sin(t * 3)))
+    # Karakterler (Görsel yüklemeden otonom tasarım)
+    # Tori: Yesil (Bilge Kaplumbaga)
+    tori = ColorClip(size=(450, 300), color=(40, 150, 40)).set_duration(sure)
+    tori = tori.set_position(lambda t: ('center', 1100 + 20 * math.sin(t)))
 
-    # Tori (Kaplumbağa - Yeşilimsi)
-    tori = ColorClip(size=(350, 350), color=(80, 255, 80)).set_duration(audio.duration)
-    tori = tori.set_position(lambda t: ('center', 1200 + 20 * math.cos(t)))
+    # Papi: Turuncu (Enerjik Ahtapot)
+    papi = ColorClip(size=(350, 350), color=(255, 120, 0)).set_duration(sure)
+    papi = papi.set_position(lambda t: (300 + 50 * math.cos(t*2), 600 + 40 * math.sin(t*3)))
 
-    # 3. Birleştirme
-    final_video = CompositeVideoClip([bg, papi, tori], size=(1080, 1920)).set_audio(audio)
-    final_video.write_videofile("otonom_shorts.mp4", fps=24, codec="libx264")
+    # Fini: Sari (Neseli Balik)
+    fini = ColorClip(size=(150, 100), color=(255, 255, 0)).set_duration(sure)
+    fini = fini.set_position(lambda t: (800 + 100 * math.sin(t*4), 800 + 150 * math.cos(t*2)))
+
+    # Kurgu ve Kayit
+    video = CompositeVideoClip([bg, tori, papi, fini], size=(1080, 1920)).set_audio(final_audio)
+    video.write_videofile("otonom_shorts.mp4", fps=24, codec="libx264")
+    print("✅ Video basariyla kaydedildi: otonom_shorts.mp4")
 
 if __name__ == "__main__":
     asyncio.run(main())

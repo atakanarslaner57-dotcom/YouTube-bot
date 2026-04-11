@@ -1,6 +1,6 @@
 name: Tam Otonom Cizgi Film Botu 4K
 on: 
-  workflow_dispatch:
+  workflow_dispatch: # Manuel çalıştırma düğmesini ekler
   push:
     branches: [ main ]
 
@@ -10,12 +10,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Sistem Paketlerini Kur
+      - name: FFmpeg ve Sistem Paketlerini Kur
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg
       
-      - name: Python Kur ve Gereksinimleri Yukle
+      - name: Python Kur ve Paketleri Yukle
         run: |
           pip install edge-tts requests
 
@@ -25,5 +25,5 @@ jobs:
       - name: Videoyu Klasore Yukle
         uses: actions/upload-artifact@v4
         with:
-          name: otonom-video
+          name: animasyon-video
           path: otonom_shorts.mp4

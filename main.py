@@ -4,75 +4,55 @@ import math
 import subprocess
 import sys
 
-# --- 1. SİSTEM VE KÜTÜPHANE HAZIRLIĞI ---
-def initialize_environment():
-    """Gerekli yamaları uygular ve kütüphane desteğini kontrol eder."""
+# 1. Kütüphane ve Hata Önleme
+def setup():
     try:
-        import pillow_avif  # AVIF desteği için kritik
         import PIL.Image
-        # MoviePy'nin aradığı ama yeni sürümlerde kalkmış olan komutu yamalıyoruz
         if not hasattr(PIL.Image, 'ANTIALIAS'):
-            PIL.Image.ANTIALIAS = getattr(PIL.Image, 'LANCZOS', None)
-        print("✅ Sistem yamaları başarıyla uygulandı.")
-    except ImportError:
-        print("⚠️ Eksik kütüphaneler var, yükleme başlatılıyor...")
-        subprocess.check_call([sys.executable, "-m", "pip", "install", 
-                               "Pillow==9.5.0", "pillow-avif-plugin", 
-                               "moviepy==1.0.3", "edge-tts"])
-        # Yüklemeden sonra tekrar dene
-        import pillow_avif
-        import PIL.Image
-        PIL.Image.ANTIALIAS = getattr(PIL.Image, 'LANCZOS', None)
+            PIL.Image.ANTIALIAS = PIL.Image.LANCZOS
+    except:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "moviepy==1.0.3", "edge-tts", "Pillow==9.5.0"])
 
-initialize_environment()
-
+setup()
 from moviepy.editor import ImageClip, CompositeVideoClip, AudioFileClip
 import edge_tts
 
-# --- 2. VİDEO ÜRETİM MANTIĞI ---
-
 async def main():
-    print("🎬 Video üretim süreci başlatıldı...")
+    print("🚀 Video üretim süreci zorlamalı modda başlıyor...")
     
-    # Dosya yollarını senin klasöründeki gerçek isimlere göre belirledik
-    assets_dir = "assets"
-    bg_path = os.path.join(assets_dir, "background.jpg.avif")
-    papi_path = os.path.join(assets_dir, "papi.png") # Loglarda 'papi.png' görünüyordu
-    
-    # Dosya kontrolü
-    if not os.path.exists(bg_path) or not os.path.exists(papi_path):
-        print(f"❌ HATA: Dosyalar bulunamadı!")
-        print(f"Aranan Arka Plan: {bg_path}")
-        print(f"Aranan Karakter: {papi_path}")
+    # Assets içindeki tüm dosyaları tara
+    files = os.listdir("assets")
+    print(f"📁 Klasördeki dosyalar: {files}")
+
+    # Dosyaları akıllıca seç (Uzantıdan bağımsız, isme göre)
+    bg_file = next((f for f in files if "background" in f.lower() or "coral" in f.lower()), None)
+    papi_file = next((f for f in files if "papi" in f.lower()), None)
+
+    if not bg_file or not papi_file:
+        print(f"❌ Kritik dosyalar eksik! Bulunanlar: BG={bg_file}, Karakter={papi_file}")
         return
 
-    # 1. Ses üretimi
-    print("🎙️ Ses dosyası oluşturuluyor...")
-    text = "Selam! Ben Kaplumbağa Papi, denizin altı harika! Arkadaşım Fini nerede?"
-    communicate = edge_tts.Communicate(text, "tr-TR-AhmetNeural")
-    audio_file = "ses.mp3"
-    await communicate.save(audio_file)
-    audio = AudioFileClip(audio_file)
+    # Ses Üretimi
+    print("🎙️ Ses üretiliyor...")
+    communicate = edge_tts.Communicate("Selam! Ben Kaplumbağa Papi!", "tr-TR-AhmetNeural")
+    await communicate.save("s1.mp3")
+    audio = AudioFileClip("s1.mp3")
 
-    # 2. Görsel katmanları oluşturma
-    print("🖼️ Görsel katmanlar işleniyor...")
-    # .avif dosyası burada pillow_avif sayesinde açılacak
-    bg = ImageClip(bg_path).set_duration(audio.duration).resize(width=1920)
-    
-    papi = ImageClip(papi_path).set_duration(audio.duration).resize(height=550)
-    
-    # Karakteri ekrana yerleştirme ve basit bir 'yüzme' hareketi (yukarı-aşağı)
-    # math.sin ile dalgalı bir hareket veriyoruz
-    papi = papi.set_position(lambda t: ("center", 420 + 35 * math.sin(t * 2.5)))
+    # Görsel İşleme (Hata verirse durmaması için try-except içinde)
+    try:
+        bg_path = f"assets/{bg_file}"
+        papi_path = f"assets/{papi_file}"
+        
+        bg = ImageClip(bg_path).set_duration(audio.duration).resize(width=1920)
+        papi = ImageClip(papi_path).set_duration(audio.duration).resize(height=550)
+        papi = papi.set_position(lambda t: ("center", 450 + 30 * math.sin(t * 2)))
 
-    # 3. Birleştirme
-    print("🎞️ Video birleştiriliyor...")
-    final_video = CompositeVideoClip([bg, papi]).set_audio(audio)
-    
-    output_filename = "ilk_cizgi_filmim.mp4"
-    final_video.write_videofile(output_filename, fps=24, codec="libx264", audio_codec="aac")
-    
-    print(f"✅ İŞLEM TAMAMLANDI: {output_filename} dosyası hazır!")
+        final = CompositeVideoClip([bg, papi]).set_audio(audio)
+        final.write_videofile("ilk_cizgi_filmim.mp4", fps=24, codec="libx264")
+        print("✅ BAŞARILI! Video dosyası oluşturuldu.")
+    except Exception as e:
+        print(f"❌ Görsel işleme hatası: {e}")
+        print("💡 ÖNERİ: Assets klasöründeki .avif dosyalarını silip yerine .png hallerini yüklemeyi dene.")
 
 if __name__ == "__main__":
     asyncio.run(main())

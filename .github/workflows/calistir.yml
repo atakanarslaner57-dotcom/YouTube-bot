@@ -11,11 +11,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ffmpeg
       - name: Python Paketleri
-        run: pip install edge-tts requests
+        run: pip install edge-tts
       - name: PRO Render Baslat
         run: python main.py
-      - name: 4K Videoyu Klasore Yukle
+      - name: 4K Videoyu Yukle
         uses: actions/upload-artifact@v4
         with:
           name: otonom-final-4k
-          path: output_4k_final.mp4
+          path: output_4k.mp4

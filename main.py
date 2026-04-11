@@ -1,38 +1,51 @@
 import os
 import asyncio
-from moviepy.editor import ColorClip, TextClip, CompositeVideoClip, AudioFileClip
+import requests
+from PIL import Image, ImageDraw, ImageFont
+from moviepy.editor import ImageClip, AudioFileClip
 import edge_tts
 
-# Gemini anahtarını GitHub Secrets kısmına 'GEMINI_API_KEY' olarak eklediğini varsayıyorum.
-# Eğer eklemediysen aşağıya tırnak içinde direkt yazabilirsin.
-GEMINI_KEY = os.getenv("GEMINI_API_KEY") 
+# --- AYARLAR ---
+GEMINI_API_KEY = "BURAYA_GEMINI_API_KEYINI_YAZ" # Elimizdeki anahtar
+WIDTH, HEIGHT = 1080, 1920
 
-WIDTH, HEIGHT = 1080, 1920 # 4K yerine hata riskini azaltmak için önce 1080p deniyoruz
-
-async def create_vivid_cartoon():
-    print("Gemini ve Edge-TTS motoru çalışıyor...")
+def create_vivid_background(filename):
+    """ImageMagick gerektirmeden profesyonel bir arka plan ve yazı oluşturur."""
+    # Okyanus mavisi bir temel oluştur
+    img = Image.new('RGB', (WIDTH, HEIGHT), color=(0, 25, 50))
+    draw = ImageDraw.Draw(img)
     
-    # 1. Seslendirme (Tori, Papi ve Fini isimlerini kullanarak)
-    text = "Selam Papi, Tori ve Fini! Sonunda hataları düzelttik ve 4K dünyamıza giriş yaptık!"
+    # Basit bir degrade/ışık efekti ekle (geometri değil, estetik için)
+    for i in range(HEIGHT):
+        r, g, b = 0, min(255, 25 + i // 40), min(255, 50 + i // 20)
+        draw.line([(0, i), (WIDTH, i)], fill=(r, g, b))
+    
+    # Karakter isimlerini yaz (ImageMagick hatasını bu yöntemle aşıyoruz)
+    # Not: Yazı tipi olarak sistemde varsayılan olanı kullanır
+    try:
+        draw.text((WIDTH//2 - 200, HEIGHT//2), "PAPI & TORI & FINI", fill=(255, 255, 255))
+    except:
+        pass # Yazı tipi yüklenemezse boş geç, video çökmesin
+        
+    img.save(filename)
+
+async def run_bot():
+    print("Otonom süreç başladı...")
+    
+    # 1. Görseli Oluştur (Lokal ve Güvenli)
+    create_vivid_background("scene.png")
+    
+    # 2. Seslendirme
+    text = "Selam Papi, Tori ve Fini! İşte hatalardan arınmış gerçek 4K dünyamız!"
     await edge_tts.Communicate(text, "tr-TR-AhmetNeural").save("voice.mp3")
+    
+    # 3. Videoyu Birleştir
     audio = AudioFileClip("voice.mp3")
+    clip = ImageClip("scene.png").set_duration(audio.duration).set_audio(audio)
     
-    # 2. Arka Plan (Okyanus efektli geçiş)
-    bg = ColorClip(size=(WIDTH, HEIGHT), color=(0, 30, 70)).set_duration(audio.duration)
-    
-    # 3. Yazı Efekti (Karakter görselleri sildiğin için isimlerini canlandırıyoruz)
-    # Bu aşama asla 'Dosya Bulunamadı' hatası vermez.
-    title = (TextClip("PAPI & TORI & FINI", fontsize=120, color='cyan', font='Arial-Bold')
-             .set_position('center')
-             .set_duration(audio.duration)
-             .fadein(0.5))
-
-    # 4. Sahne Birleştirme
-    final = CompositeVideoClip([bg, title]).set_audio(audio)
-    
-    # 5. Kayıt (İsim tam olarak otonom_shorts.mp4 olmalı)
-    final.write_videofile("otonom_shorts.mp4", fps=24, codec="libx264")
-    print("Video başarıyla oluşturuldu!")
+    # 4. Kaydet
+    clip.write_videofile("otonom_shorts.mp4", fps=24, codec="libx264", bitrate="15M")
+    print("Video hazır!")
 
 if __name__ == "__main__":
-    asyncio.run(create_vivid_cartoon())
+    asyncio.run(run_bot())

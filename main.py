@@ -3,59 +3,60 @@ import asyncio
 import math
 from moviepy.editor import ImageClip, CompositeVideoClip, AudioFileClip, vfx
 import edge_tts
+import PIL.Image
 
-# --- SHORTS YAPILANDIRMASI ---
-SIZE = (1080, 1920) # Tam dikey Shorts boyutu
-
-async def generate_pro_voice(text, filename, char_type="papi"):
-    # Papi: Tiz ve hızlı | Tori: Kalın ve sakin
-    voice = "tr-TR-AhmetNeural" if char_type == "papi" else "tr-TR-EmelNeural"
-    pitch = "+15Hz" if char_type == "papi" else "-10Hz"
-    rate = "+15%" if char_type == "papi" else "-5%"
-    
-    communicate = edge_tts.Communicate(text, voice, pitch=pitch, rate=rate)
-    await communicate.save(filename)
+# Eski Pillow sürümleri için yama
+if not hasattr(PIL.Image, 'Resampling'):
+    PIL.Image.Resampling = PIL.Image
 
 async def main():
-    print("🎬 Yapay zeka otonom kurguya başlıyor...")
+    print("📱 YouTube Shorts üretimi otonom modda başladı...")
+    assets_dir = "assets"
     
-    # 1. Senaryo Yazımı ve Seslendirme
-    lines = [
-        ("papi", "Vay canına Tori! Bu dikey ekran bizi ne kadar da uzun gösterdi böyle!"),
-        ("tori", "Acele etme Papi... Derin suların tadını çıkar, Shorts izleyenlere el salla.")
-    ]
+    # 1. Dosya Tespiti (Shorts için dikey format)
+    files = os.listdir(assets_dir)
+    bg_path = next((os.path.join(assets_dir, f) for f in files if "arka" in f.lower() or "back" in f.lower()), None)
+    papi_path = next((os.path.join(assets_dir, f) for f in files if "papi" in f.lower()), None)
+    tori_path = next((os.path.join(assets_dir, f) for f in files if "tori" in f.lower()), None)
+
+    if not bg_path or not papi_path or not tori_path:
+        print("❌ HATA: Görsel dosyaları (arka plan, papi, tori) bulunamadı! İsimleri kontrol et.")
+        return
+
+    # 2. Seslendirme (Karakterlere özel tonlar)
+    print("🎙️ Ses dosyası hazırlanıyor...")
     
-    audio_clips = []
-    for i, (char, text) in enumerate(lines):
-        fname = f"speech_{i}.mp3"
-        await generate_pro_voice(text, fname, char)
-        audio_clips.append(AudioFileClip(fname))
+    # Papi (Ahtapot) için tiz ve hızlı ses
+    papi_text = "Selam Tori! Şu dikey dünyaya bak, her şey ne kadar uzun görünüyor!"
+    papi_comm = edge_tts.Communicate(papi_text, "tr-TR-AhmetNeural", pitch="+15Hz", rate="+10%")
+    await papi_comm.save("ses_papi.mp3")
     
+    # Tori (Kaplumbağa) için kalın ve yavaş ses
+    tori_text = "Haklısın Papi. Ama endişelenme, kabuğum hala her yere sığıyor."
+    tori_comm = edge_tts.Communicate(tori_text, "tr-TR-EmelNeural", pitch="-10Hz", rate="-5%")
+    await tori_comm.save("ses_tori.mp3")
+
+    # Sesleri birleştirme
     from moviepy.editor import concatenate_audioclips
-    final_audio = concatenate_audioclips(audio_clips)
+    final_audio = concatenate_audioclips([AudioFileClip("ses_papi.mp3"), AudioFileClip("ses_tori.mp3")])
 
-    # 2. Görsel Katmanlar (Dikey Formata Uyarlama)
-    # Mevcut dosyalarını bulur, yoksa hata vermez, dikey merkeze yerleştirir
-    assets = os.listdir("assets")
-    bg_file = next((f for f in assets if "arka" in f.lower()), "background.png")
-    papi_file = next((f for f in assets if "papi" in f.lower()), "papi.png")
-    tori_file = next((f for f in assets if "tori" in f.lower()), "tori.png")
+    # 3. Görsel Kurgu (Shorts Boyutu: 1080 x 1920)
+    bg = ImageClip(bg_path).set_duration(final_audio.duration).resize(height=1920)
+    
+    # Arka plana yavaş bir zoom efekti
+    bg = bg.fx(vfx.resize, lambda t: 1 + 0.01 * t)
 
-    # Arka plan: Yavaşça zoom yapan dikey kadraj
-    bg = ImageClip(f"assets/{bg_file}").set_duration(final_audio.duration).resize(height=1920)
-    bg = bg.set_position('center').fx(vfx.resize, lambda t: 1 + 0.02 * t)
+    # Karakterleri dikey ekrana yerleştirme (Merkeze odaklı)
+    papi = ImageClip(papi_path).set_duration(final_audio.duration).resize(width=600)
+    papi = papi.set_position(lambda t: ('center', 1000 + 30 * math.sin(t * 2)))
 
-    # Papi (Ahtapot): Ekranın ortasında yüzme animasyonu
-    papi = ImageClip(f"assets/{papi_file}").set_duration(final_audio.duration).resize(width=700)
-    papi = papi.set_position(lambda t: ('center', 800 + 40 * math.sin(t * 2)))
+    tori = ImageClip(tori_path).set_duration(final_audio.duration).resize(width=500)
+    tori = tori.set_position(lambda t: ('center', 1400 + 20 * math.cos(t)))
 
-    # Tori (Kaplumbağa): Daha aşağıda, yavaş salınım
-    tori = ImageClip(f"assets/{tori_file}").set_duration(final_audio.duration).resize(width=600)
-    tori = tori.set_position(lambda t: ('center', 1300 + 20 * math.cos(t)))
-
-    # 3. Final Birleştirme
-    final_video = CompositeVideoClip([bg, papi, tori], size=SIZE).set_audio(final_audio)
-    final_video.write_videofile("shorts_final.mp4", fps=24, codec="libx264")
+    # 4. Final Birleştirme
+    final = CompositeVideoClip([bg, papi, tori], size=(1080, 1920)).set_audio(final_audio)
+    final.write_videofile("otonom_shorts.mp4", fps=24, codec="libx264")
+    print("✅ Shorts videosu hazır: otonom_shorts.mp4")
 
 if __name__ == "__main__":
     asyncio.run(main())

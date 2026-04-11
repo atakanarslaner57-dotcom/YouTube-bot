@@ -4,7 +4,7 @@ import sys
 import asyncio
 import math
 
-# --- 1. OTOMATİK KÜTÜPHANE YÜKLEME ---
+# --- 1. KÜTÜPHANE YÜKLEME ---
 def install_dependencies():
     try:
         import edge_tts
@@ -17,55 +17,66 @@ install_dependencies()
 import edge_tts
 from moviepy.editor import ImageClip, CompositeVideoClip, AudioFileClip
 
-# --- 2. AYARLAR (Dosya isimlerini kontrol et!) ---
-RESIMLER = {
-    "bg": "clear-colorful-illustrations-underwater-world-coral-reefs_628444-390.avif",
-    "papi": "adorable-3d-illustration-baby-sea-turtle-turtle-has-light-green-shell-yellow-skin-it-is-smiling-looking-up-viewer_14117-541083.avif",
-    "fini": "view-animated-cartoon-3d-fish_23-2150985174.avif",
-    "tori": "3d-rendering-sea-ocean-icon_23-2151701656.avif"
-}
+# --- 2. DOSYALARI BULMA FONKSİYONU ---
+def get_asset_path(filename_or_keyword):
+    assets_dir = "assets"
+    if not os.path.exists(assets_dir):
+        print(f"❌ HATA: '{assets_dir}' klasörü bulunamadı!")
+        return None
+        
+    # Önce tam adı dene (papi.png gibi)
+    full_path = os.path.join(assets_dir, filename_or_keyword)
+    if os.path.exists(full_path):
+        return full_path
+        
+    # Bulamazsa klasör içinde o kelimeyi içeren ilk png'yi bul
+    for file in os.listdir(assets_dir):
+        if filename_or_keyword.lower() in file.lower() and file.endswith(".png"):
+            return os.path.join(assets_dir, file)
+    return None
 
-# --- 3. SAHNE OLUŞTURUCU ---
 async def generate_audio(text, voice, filename):
     communicate = edge_tts.Communicate(text, voice)
     await communicate.save(filename)
     return AudioFileClip(filename)
 
-def create_scene(char_key, audio_clip):
+def create_scene(image_path, audio_clip):
     duration = audio_clip.duration
-    bg = ImageClip(f"assets/{RESIMLER['bg']}").set_duration(duration).resize(width=1920)
+    # Arka planı 'coral' veya 'underwater' kelimesinden bulur
+    bg_path = get_asset_path("coral") or get_asset_path("underwater")
     
-    char_path = f"assets/{RESIMLER[char_key]}"
-    if not os.path.exists(char_path):
-        print(f"❌ HATA: {char_path} bulunamadı!")
+    if not bg_path or not image_path:
+        print(f"❌ Eksik dosya: BG={bg_path}, Karakter={image_path}")
         return None
 
-    char = ImageClip(char_path).set_duration(duration).resize(height=500)
+    bg = ImageClip(bg_path).set_duration(duration).resize(width=1920)
+    char = ImageClip(image_path).set_duration(duration).resize(height=500)
+    # Karakteri ekranda hafifçe yüzüyormuş gibi hareket ettirir
     char = char.set_position(lambda t: ("center", 400 + 30 * math.sin(t * 3)))
     
     return CompositeVideoClip([bg, char]).set_audio(audio_clip)
 
 async def main():
-    print("🚀 Video üretim süreci başladı...")
+    print("🚀 Video üretim süreci başladı (.png modunda)...")
+    
+    # Karakter dosyalarını senin verdiğin isimlere göre ara
+    papi_img = get_asset_path("papi.png")
+    fini_img = get_asset_path("fini.png")
     
     # Sesleri üret
-    s1_ses = await generate_audio("Selam! Ben Kaplumbağa Papi, bu resif çok güzel!", "tr-TR-AhmetNeural", "s1.mp3")
-    s2_ses = await generate_audio("Ben de Fini! Hadi beraber yüzelim!", "tr-TR-EmelNeural", "s2.mp3")
+    s1_ses = await generate_audio("Selam! Ben Kaplumbağa Papi!", "tr-TR-AhmetNeural", "s1.mp3")
+    s2_ses = await generate_audio("Ben de Fini! Hadi yüzelim!", "tr-TR-EmelNeural", "s2.mp3")
     
-    # Sahneleri oluştur
-    sahne1 = create_scene("papi", s1_ses)
-    sahne2 = create_scene("fini", s2_ses)
+    sahne1 = create_scene(papi_img, s1_ses)
+    sahne2 = create_scene(fini_img, s2_ses)
     
     if sahne1 and sahne2:
         from moviepy.editor import concatenate_videoclips
         final_video = concatenate_videoclips([sahne1, sahne2], method="compose")
-        
-        # DOSYA ADI YAML İLE AYNI OLMALI
-        output_name = "ilk_cizgi_filmim.mp4"
-        final_video.write_videofile(output_name, fps=24, codec="libx264", audio_codec="aac")
-        print(f"✅ VİDEO KAYDEDİLDİ: {output_name}")
+        final_video.write_videofile("ilk_cizgi_filmim.mp4", fps=24, codec="libx264")
+        print("✅ BAŞARILI: ilk_cizgi_filmim.mp4 oluşturuldu!")
     else:
-        print("❌ Sahne oluşturulamadığı için video kaydedilmedi.")
+        print("❌ HATA: Karakter veya arka plan dosyaları assets klasöründe bulunamadı.")
 
 if __name__ == "__main__":
     asyncio.run(main())

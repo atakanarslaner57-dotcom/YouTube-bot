@@ -1,6 +1,6 @@
 name: Tam Otonom Cizgi Film Botu 4K
 on: 
-  workflow_dispatch: # Bu satır "Run workflow" düğmesini manuel olarak getirir
+  workflow_dispatch:
   push:
     branches: [ main ]
 
@@ -10,18 +10,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Python Kur
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-
-      - name: FFmpeg Kur
+      - name: Sistem Paketlerini Kur
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg
       
-      - name: Gereksinimleri Kur
-        run: pip install requests edge-tts
+      - name: Python Kur ve Gereksinimleri Yukle
+        run: |
+          pip install edge-tts requests
 
       - name: Videoyu Uret
         run: python main.py

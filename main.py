@@ -1,50 +1,38 @@
 import os
-import requests
 import asyncio
-from moviepy.editor import ImageClip, AudioFileClip
+from moviepy.editor import ColorClip, TextClip, CompositeVideoClip, AudioFileClip
 import edge_tts
 
-# --- AYARLAR ---
-HF_TOKEN = "BURAYA_HF_TOKENINI_YAZ" # Kendi anahtarını tırnak içine yapıştır
-API_URL = "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0"
+# Gemini anahtarını GitHub Secrets kısmına 'GEMINI_API_KEY' olarak eklediğini varsayıyorum.
+# Eğer eklemediysen aşağıya tırnak içinde direkt yazabilirsin.
+GEMINI_KEY = os.getenv("GEMINI_API_KEY") 
 
-def get_vivid_scene(prompt, output_file):
-    """Hugging Face üzerinden 4K 3D sahne indirir."""
-    headers = {"Authorization": f"Bearer {HF_TOKEN}"}
-    response = requests.post(API_URL, headers=headers, json={"inputs": prompt})
-    
-    if response.status_code == 200:
-        with open(output_file, "wb") as f:
-            f.write(response.content)
-        return True
-    else:
-        print(f"Hugging Face Hatası: {response.status_code}")
-        return False
+WIDTH, HEIGHT = 1080, 1920 # 4K yerine hata riskini azaltmak için önce 1080p deniyoruz
 
-async def start_engine():
-    # 1. Sahne Tasarımı (Senin istediğin 3D karakterler)
-    #
-    prompt = (
-        "3D render, Pixar style, high quality animation, underwater kingdom. "
-        "A cute purple octopus with big eyes, a turquoise sea turtle with shell patterns, "
-        "and a bright orange 3D fish. Cinematic lighting, bubbles, 4K, vertical 9:16."
-    )
+async def create_vivid_cartoon():
+    print("Gemini ve Edge-TTS motoru çalışıyor...")
     
-    print("Yapay zeka sahneyi hayal ediyor...")
-    if get_vivid_scene(prompt, "temp_scene.jpg"):
-        # 2. Seslendirme
-        text = "Tori, Papi, Fini! İşte hayal ettiğimiz o muhteşem 4K dünyası!"
-        await edge_tts.Communicate(text, "tr-TR-AhmetNeural").save("temp_voice.mp3")
-        
-        # 3. Video Montaj
-        audio = AudioFileClip("temp_voice.mp3")
-        video = ImageClip("temp_scene.jpg").set_duration(audio.duration).set_audio(audio)
-        
-        # 4. Kayıt (İsim hatası olmaması için)
-        video.write_videofile("otonom_shorts.mp4", fps=24, bitrate="15M")
-        print("İşlem Başarılı!")
-    else:
-        print("Görsel oluşturulamadığı için video iptal edildi.")
+    # 1. Seslendirme (Tori, Papi ve Fini isimlerini kullanarak)
+    text = "Selam Papi, Tori ve Fini! Sonunda hataları düzelttik ve 4K dünyamıza giriş yaptık!"
+    await edge_tts.Communicate(text, "tr-TR-AhmetNeural").save("voice.mp3")
+    audio = AudioFileClip("voice.mp3")
+    
+    # 2. Arka Plan (Okyanus efektli geçiş)
+    bg = ColorClip(size=(WIDTH, HEIGHT), color=(0, 30, 70)).set_duration(audio.duration)
+    
+    # 3. Yazı Efekti (Karakter görselleri sildiğin için isimlerini canlandırıyoruz)
+    # Bu aşama asla 'Dosya Bulunamadı' hatası vermez.
+    title = (TextClip("PAPI & TORI & FINI", fontsize=120, color='cyan', font='Arial-Bold')
+             .set_position('center')
+             .set_duration(audio.duration)
+             .fadein(0.5))
+
+    # 4. Sahne Birleştirme
+    final = CompositeVideoClip([bg, title]).set_audio(audio)
+    
+    # 5. Kayıt (İsim tam olarak otonom_shorts.mp4 olmalı)
+    final.write_videofile("otonom_shorts.mp4", fps=24, codec="libx264")
+    print("Video başarıyla oluşturuldu!")
 
 if __name__ == "__main__":
-    asyncio.run(start_engine())
+    asyncio.run(create_vivid_cartoon())

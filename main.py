@@ -1,76 +1,54 @@
 import os
 import asyncio
 import math
-import subprocess
-import sys
-
-# 1. Ortam Yaması (ANTIALIAS Hatası İçin)
-try:
-    import PIL.Image
-    if not hasattr(PIL.Image, 'ANTIALIAS'):
-        PIL.Image.ANTIALIAS = getattr(PIL.Image, 'LANCZOS', None)
-except:
-    pass
-
 from moviepy.editor import ImageClip, CompositeVideoClip, AudioFileClip
 import edge_tts
+import PIL.Image
+
+# GitHub Actions üzerindeki eski kütüphane hatalarını önlemek için yama
+if not hasattr(PIL.Image, 'ANTIALIAS'):
+    PIL.Image.ANTIALIAS = getattr(PIL.Image, 'LANCZOS', PIL.Image.BICUBIC)
 
 async def main():
-    print("🎬 Profesyonel video üretimi akıllı modda başlıyor...")
-    
+    print("🚀 Video üretim süreci başladı...")
     assets_dir = "assets"
-    if not os.path.exists(assets_dir):
-        print("❌ HATA: assets klasörü bulunamadı!")
-        return
-
+    
+    # 1. Akıllı Dosya Tespiti (İsim hatalarını tolere eder)
     files = os.listdir(assets_dir)
-    print(f"📁 Klasördeki dosyalar: {files}")
+    bg_path = next((os.path.join(assets_dir, f) for f in files if "arka" in f.lower() or "back" in f.lower()), None)
+    papi_path = next((os.path.join(assets_dir, f) for f in files if "papi" in f.lower()), None)
+    ahtapot_path = next((os.path.join(assets_dir, f) for f in files if "ahtapot" in f.lower() or "tori" in f.lower()), None)
 
-    # --- AKILLI DOSYA BULUCU ---
-    # İsimlerin içinde geçen kelimelere göre dosyaları otomatik seçer
-    bg_file = next((f for f in files if "arka" in f.lower() or "back" in f.lower()), None)
-    papi_file = next((f for f in files if "papi" in f.lower()), None)
-    ahtapot_file = next((f for f in files if "ahtapot" in f.lower() or "tori" in f.lower()), None)
-
-    if not bg_file or not papi_file:
-        print(f"❌ KRİTİK HATA: Arka plan veya Papi dosyası bulunamadı!")
+    if not bg_path or not papi_path:
+        print("❌ HATA: Arka plan veya Papi dosyası bulunamadı!")
         return
 
-    # 2. Seslendirme (Doğal ve Akıcı Ton)
-    print("🎙️ Seslendirme oluşturuluyor...")
-    text = (
-        "Selam dostlar! Ben Kaplumbağa Papi. Bugün denizin derinliklerinde harika bir gün. "
-        "Dostum Ahtapot ile birlikte mercanların arasında süzülüyoruz. "
-        "Unutmayın, en büyük dalgalarda bile yanınızda bir dostunuz varsa yolculuk hep huzurludur."
-    )
-    # En doğal Türkçe seslerden biri
+    # 2. Seslendirme (Doğal Ses)
+    print("🎙️ Ses dosyası hazırlanıyor...")
+    text = "Selam dostlar! Ben Kaplumbağa Papi. Yanımda en yakın arkadaşım Ahtapot var. Birlikte denizin derinliklerini keşfediyoruz!"
     communicate = edge_tts.Communicate(text, "tr-TR-AhmetNeural")
-    await communicate.save("final_ses.mp3")
-    audio = AudioFileClip("final_ses.mp3")
+    await communicate.save("ses.mp3")
+    audio = AudioFileClip("ses.mp3")
 
     # 3. Görsel Kurgu
-    print("🖼️ Sahneler birleştiriliyor...")
+    bg = ImageClip(bg_path).set_duration(audio.duration).resize(width=1920)
+    papi = ImageClip(papi_path).set_duration(audio.duration).resize(height=450)
     
-    # Arka Plan
-    bg = ImageClip(os.path.join(assets_dir, bg_file)).set_duration(audio.duration).resize(width=1920)
-    
-    # Papi (Sol alt - Yüzme hareketi)
-    papi = ImageClip(os.path.join(assets_dir, papi_file)).set_duration(audio.duration).resize(height=450)
-    papi = papi.set_position(lambda t: (300 + 15 * math.sin(t), 600 + 10 * math.cos(t)))
+    # Papi'ye yüzme efekti (sol alt)
+    papi = papi.set_position(lambda t: (300 + 10 * math.sin(t), 600 + 15 * math.cos(t)))
 
-    # Ahtapot (Sağ alt - Süzülme hareketi)
-    clips = [bg, papi]
-    if ahtapot_file:
-        ahtapot = ImageClip(os.path.join(assets_dir, ahtapot_file)).set_duration(audio.duration).resize(height=400)
-        ahtapot = ahtapot.set_position(lambda t: (1200, 550 + 25 * math.sin(t * 1.5)))
-        clips.append(ahtapot)
+    katmanlar = [bg, papi]
 
-    # 4. Final Kayıt
-    final_video = CompositeVideoClip(clips).set_audio(audio)
-    output_name = "papi_ve_dostu_final.mp4"
-    final_video.write_videofile(output_name, fps=24, codec="libx264", audio_codec="aac")
-    
-    print(f"✨ BAŞARILI! Video hazır: {output_name}")
+    # Eğer ahtapot resmi de varsa ekle (sağ alt)
+    if ahtapot_path:
+        ahtapot = ImageClip(ahtapot_path).set_duration(audio.duration).resize(height=400)
+        ahtapot = ahtapot.set_position(lambda t: (1200, 550 + 20 * math.sin(t * 1.5)))
+        katmanlar.append(ahtapot)
+
+    # 4. Kayıt (Dosya ismi sistemin aradığı isimle aynı: ilk_cizgi_filmim.mp4)
+    final = CompositeVideoClip(katmanlar).set_audio(audio)
+    final.write_videofile("ilk_cizgi_filmim.mp4", fps=24, codec="libx264")
+    print("✅ Video başarıyla oluşturuldu: ilk_cizgi_filmim.mp4")
 
 if __name__ == "__main__":
     asyncio.run(main())

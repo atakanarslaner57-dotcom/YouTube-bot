@@ -1,7 +1,7 @@
-name: Tam Otonom Cizgi Film Botu
+name: Tam Otonom Cizgi Film Botu 4K
 
 on:
-  workflow_dispatch: # Bu satır "Run workflow" butonunu aktif eder.
+  workflow_dispatch:
 
 jobs:
   render:
@@ -12,17 +12,15 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Gerekli Paketleri Yukle
+      - name: Paketleri Kur
         run: |
-          sudo apt-get update
-          sudo apt-get install -y imagemagick
           pip install moviepy==1.0.3 edge-tts Pillow numpy
 
       - name: Videoyu Uret
         run: python main.py
 
-      - name: Videoyu Kaydet
+      - name: Videoyu Klasore Yukle
         uses: actions/upload-artifact@v4
         with:
-          name: otonom-video-cikti
-          path: otonom_shorts.mp4 # Bu isim main.py ile birebir AYNI olmalı.
+          name: otonom-video-sonuc
+          path: otonom_shorts.mp4 # main.py'deki OUTPUT_NAME ile tam eşleşmeli!

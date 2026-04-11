@@ -1,63 +1,68 @@
 import asyncio
 import math
 import numpy as np
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFilter
 from moviepy.editor import VideoClip, AudioFileClip, concatenate_audioclips
 import edge_tts
 
-# --- Karakterleri 'Canlı' Çizme Motoru ---
-def ciz_papi_detayli(draw, x, y, t):
-    # Kollar (Vantuzlu ve kıvrımlı)
-    for i in range(8):
-        ang = i * (math.pi/4) + math.sin(t*2)*0.2
-        points = []
-        for d in range(5): # Kolu 5 parçada çizerek kıvırıyoruz
-            kx = x + (d*30) * math.cos(ang + math.sin(t*3+d)*0.3)
-            ky = y + (d*30) * math.sin(ang + math.cos(t*3+d)*0.3)
-            points.append((kx, ky))
-            # Vantuzlar
-            draw.ellipse([kx-4, ky-4, kx+4, ky+4], fill=(255, 150, 150))
-        draw.line(points, fill=(255, 80, 50), width=18-d*2)
-    # Kafa ve Yüz
-    draw.ellipse([x-60, y-80, x+60, y+40], fill=(255, 80, 50), outline=(150, 0, 0))
-    # Gözler (Canlı bakış)
-    for ex in [x-25, x+25]:
-        draw.ellipse([ex-15, y-30, ex+15, y], fill="white")
-        draw.ellipse([ex-5, y-20, ex+5, y-10], fill="black")
+# --- Profesyonel Çizim Motoru ---
+def ciz_deniz(draw, t):
+    # Gradyan Deniz (Yukarıdan aşağıya koyulaşan)
+    for y in range(0, 1920, 10):
+        color = (0, int(20 + y/40), int(60 + y/30))
+        draw.rectangle([0, y, 1080, y+10], fill=color)
+    
+    # Işık huzmeleri (Yüzeyden gelen)
+    for i in range(3):
+        x_pos = 200 + i*300 + math.sin(t)*50
+        draw.polygon([(x_pos, 0), (x_pos+100, 0), (x_pos-200, 1920), (x_pos-300, 1920)], fill=(20, 80, 120, 100))
 
-def ciz_tori_detayli(draw, x, y, t):
-    s = 8 * math.sin(t*2)
-    # Yüzgeçler
-    for fx, fy in [(-90, 20), (90, 20)]:
-        draw.ellipse([x+fx-30, y+fy+s, x+fx+30, y+fy+20+s], fill=(46, 139, 87))
-    # Kabuk ve Desenler
-    draw.ellipse([x-130, y-50+s, x+130, y+110+s], fill=(107, 142, 35), outline="black")
-    for i in range(3): # Altıgen desenleri taklit et
-        draw.regular_polygon((x, y+30+s, 60-i*15), 6, rotation=30, outline=(50, 80, 20), width=2)
-    # Kafa
-    draw.ellipse([x-35, y-90+s, x+35, y-20+s], fill=(144, 238, 144), outline="black")
+def ciz_papi(draw, x, y, t, konusuyor=False):
+    # Kollar (Vantuzlu ve Yumuşak Hatlı)
+    for i in range(8):
+        ang = i * (math.pi/4) + math.sin(t*3 + i)*0.3
+        pts = [(x, y)]
+        for d in range(6):
+            kx = x + (d*35) * math.cos(ang + math.sin(t*2+d)*0.2)
+            ky = y + (d*35) * math.sin(ang + math.cos(t*2+d)*0.2)
+            pts.append((kx, ky))
+            # Vantuzlar (Küçük beyaz noktalar)
+            if d > 2: draw.ellipse([kx-5, ky-5, kx+5, ky+5], fill=(255, 200, 200))
+        draw.line(pts, fill=(255, 100, 80), width=25-d*3)
+    
+    # Kafa ve Yüz
+    draw.ellipse([x-70, y-90, x+70, y+50], fill=(255, 100, 80), outline=(180, 50, 40), width=3)
+    # Gözler (Canlı)
+    for ex in [x-30, x+30]:
+        draw.ellipse([ex-18, y-40, ex+18, y], fill="white", outline="black")
+        draw.ellipse([ex-6, y-25, ex+6, y-13], fill="black") # Göz bebeği
+    # Ağız (Konuşma Efekti)
+    ağız_genislik = 20 + (15 * math.sin(t*15) if konusuyor else 0)
+    draw.chord([x-ağız_genislik, y+10, x+ağız_genislik, y+30], 0, 180, fill=(100, 0, 0))
 
 def make_frame(t):
-    # Derinlik efektli deniz
-    img = Image.new("RGB", (1080, 1920), (0, 25, 60))
+    img = Image.new("RGBA", (1080, 1920))
     draw = ImageDraw.Draw(img)
     
-    # Hareketli Mercanlar (Arka Plan Yaşamı)
-    for i in range(6):
-        h = 180 + 60 * math.sin(t + i)
-        draw.chord([i*180, 1920-h, i*180+200, 1920+100], 0, 180, fill=(200, 80, 120))
-
-    # Karakterler
-    ciz_papi_detayli(draw, 540 + 40*math.sin(t), 700 + 30*math.cos(t), t)
-    ciz_tori_detayli(draw, 540, 1450, t)
+    ciz_deniz(draw, t)
     
-    return np.array(img)
+    # Karakterler (Papi ve Tori)
+    # Papi konuşma süresi (0-4 saniye arası varsayalım)
+    papi_konusuyor = True if t < 4 else False
+    ciz_papi(draw, 540 + 50*math.sin(t), 700 + 40*math.cos(t*0.8), t, papi_konusuyor)
+    
+    # Arka Plan Baloncukları
+    for i in range(10):
+        bx = (i*200 + t*60) % 1080
+        by = (1800 - t*150 - i*120) % 1920
+        draw.ellipse([bx, by, bx+15, by+15], outline=(200, 230, 255, 150))
 
-async def uret_shorts():
-    # Seslendirme (Daha vurgulu ve karakter bazlı)
+    return np.array(img.convert("RGB"))
+
+async def uret():
     diyaloglar = [
-        ("tr-TR-AhmetNeural", "Bak Tori! Sonunda kollarimda vantuzlarim, senin kabugunda desenlerin var!", "+15Hz"),
-        ("tr-TR-EmelNeural", "Evet Papi, simdi gercekten okyanusun bir parcasi gibi hissettim.", "-12Hz")
+        ("tr-TR-AhmetNeural", "Bak Tori! Sonunda kollarımda vantuzlarım, senin kabuğunda desenlerin var!", "+15Hz"),
+        ("tr-TR-EmelNeural", "Evet Papi, şimdi gerçekten okyanusun bir parçası gibi hissettim.", "-12Hz")
     ]
     clips = []
     for i, (ses, metin, perde) in enumerate(diyaloglar):
@@ -70,4 +75,4 @@ async def uret_shorts():
     video.write_videofile("otonom_shorts.mp4", fps=24, codec="libx264")
 
 if __name__ == "__main__":
-    asyncio.run(uret_shorts())
+    asyncio.run(uret())

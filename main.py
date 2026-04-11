@@ -1,54 +1,58 @@
 import os
 import asyncio
 import math
+import numpy as np
 from moviepy.editor import ImageClip, CompositeVideoClip, AudioFileClip
+from rembg import remove
+from PIL import Image
 import edge_tts
-import PIL.Image
-
-# GitHub Actions üzerindeki eski kütüphane hatalarını önlemek için yama
-if not hasattr(PIL.Image, 'ANTIALIAS'):
-    PIL.Image.ANTIALIAS = getattr(PIL.Image, 'LANCZOS', PIL.Image.BICUBIC)
 
 async def main():
-    print("🚀 Video üretim süreci başladı...")
     assets_dir = "assets"
     
-    # 1. Akıllı Dosya Tespiti (İsim hatalarını tolere eder)
-    files = os.listdir(assets_dir)
-    bg_path = next((os.path.join(assets_dir, f) for f in files if "arka" in f.lower() or "back" in f.lower()), None)
-    papi_path = next((os.path.join(assets_dir, f) for f in files if "papi" in f.lower()), None)
-    ahtapot_path = next((os.path.join(assets_dir, f) for f in files if "ahtapot" in f.lower() or "tori" in f.lower()), None)
+    def clean_image(name):
+        """Arka planı otomatik siler ve şeffaf PNG yapar"""
+        files = os.listdir(assets_dir)
+        target = next((f for f in files if name in f.lower()), None)
+        if target:
+            input_path = os.path.join(assets_dir, target)
+            output_path = f"cleaned_{name}.png"
+            with open(input_path, 'rb') as i:
+                input_data = i.read()
+                output_data = remove(input_data)
+                with open(output_path, 'wb') as o:
+                    o.write(output_data)
+            return output_path
+        return None
 
-    if not bg_path or not papi_path:
-        print("❌ HATA: Arka plan veya Papi dosyası bulunamadı!")
-        return
+    print("🖋️ Görseller temizleniyor...")
+    papi_path = clean_image("papi")
+    ahtapot_path = clean_image("tori") # tori veya ahtapot
+    bg_file = next((f for f in os.listdir(assets_dir) if "arka" in f.lower() or "back" in f.lower()), None)
 
-    # 2. Seslendirme (Doğal Ses)
-    print("🎙️ Ses dosyası hazırlanıyor...")
-    text = "Selam dostlar! Ben Kaplumbağa Papi. Yanımda en yakın arkadaşım Ahtapot var. Birlikte denizin derinliklerini keşfediyoruz!"
+    # Seslendirme (Doğal Ses)
+    print("🎙️ Ses hazırlanıyor...")
+    text = "Selam dostlar! Ben Kaplumbağa Papi. Sonunda o teknik sorunları aştık. Yanımda dostum Ahtapot ile denizin en derin, en mavi yerindeyiz. Dostluk, zorlukları beraber aşmaktır!"
     communicate = edge_tts.Communicate(text, "tr-TR-AhmetNeural")
     await communicate.save("ses.mp3")
     audio = AudioFileClip("ses.mp3")
 
-    # 3. Görsel Kurgu
-    bg = ImageClip(bg_path).set_duration(audio.duration).resize(width=1920)
-    papi = ImageClip(papi_path).set_duration(audio.duration).resize(height=450)
+    # Kurgu
+    bg = ImageClip(os.path.join(assets_dir, bg_file)).set_duration(40).resize(width=1920)
     
-    # Papi'ye yüzme efekti (sol alt)
-    papi = papi.set_position(lambda t: (300 + 10 * math.sin(t), 600 + 15 * math.cos(t)))
+    papi = ImageClip(papi_path).set_duration(40).resize(height=450)
+    papi = papi.set_position(lambda t: (300 + 20 * math.sin(t), 650 + 10 * math.cos(t)))
 
     katmanlar = [bg, papi]
 
-    # Eğer ahtapot resmi de varsa ekle (sağ alt)
     if ahtapot_path:
-        ahtapot = ImageClip(ahtapot_path).set_duration(audio.duration).resize(height=400)
-        ahtapot = ahtapot.set_position(lambda t: (1200, 550 + 20 * math.sin(t * 1.5)))
+        ahtapot = ImageClip(ahtapot_path).set_duration(40).resize(height=400)
+        ahtapot = ahtapot.set_position(lambda t: (1200, 550 + 25 * math.sin(t * 1.5)))
         katmanlar.append(ahtapot)
 
-    # 4. Kayıt (Dosya ismi sistemin aradığı isimle aynı: ilk_cizgi_filmim.mp4)
     final = CompositeVideoClip(katmanlar).set_audio(audio)
-    final.write_videofile("ilk_cizgi_filmim.mp4", fps=24, codec="libx264")
-    print("✅ Video başarıyla oluşturuldu: ilk_cizgi_filmim.mp4")
+    final.write_videofile("ilk_cizgi_filmim.mp4", fps=24)
+    print("✨ İşlem Tamam! Arka planlar silindi, ses eklendi.")
 
 if __name__ == "__main__":
     asyncio.run(main())

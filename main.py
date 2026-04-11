@@ -1,50 +1,36 @@
 import os
-import asyncio
 import math
-from moviepy.editor import ImageClip, CompositeVideoClip, AudioFileClip
-import edge_tts
+from moviepy.editor import ImageClip, CompositeVideoClip, AudioFileClip, ColorClip
 
-async def main():
-    print("🚀 Video üretim süreci başlatıldı...")
+def create_pro_video():
+    # Ayarlar
+    DURATION = 40
+    assets = "assets"
     
-    # Assets klasöründeki dosyaları tara
-    assets_dir = "assets"
-    files = os.listdir(assets_dir)
-    print(f"📁 Klasördeki dosyalar: {files}")
-
-    # Dosya isimlerindeki hataları (çift uzantı veya boşluk) otomatik bulalım
-    # 'arka plan.jpg.png' gibi dosyaları eşleştirmek için:
-    bg_file = next((f for f in files if "arka" in f.lower() or "background" in f.lower()), None)
-    papi_file = next((f for f in files if "papi" in f.lower()), None)
-
-    if not bg_file or not papi_file:
-        print(f"❌ HATA: Gerekli dosyalar bulunamadı!")
-        return
-
-    # Ses üretimi
-    print("🎙️ Ses dosyası hazırlanıyor...")
-    text = "Selam! Ben Kaplumbağa Papi. Sonunda teknik sorunları çözdük ve denizin altındayız!"
-    communicate = edge_tts.Communicate(text, "tr-TR-AhmetNeural")
-    await communicate.save("s1.mp3")
-    audio = AudioFileClip("s1.mp3")
-
-    # Görsel katmanlar
-    bg_path = os.path.join(assets_dir, bg_file)
-    papi_path = os.path.join(assets_dir, papi_file)
-
-    print(f"🖼️ İşlenen dosyalar: BG={bg_file}, Karakter={papi_file}")
-
-    bg = ImageClip(bg_path).set_duration(audio.duration).resize(width=1920)
-    papi = ImageClip(papi_path).set_duration(audio.duration).resize(height=550)
+    # 1. Arka Planı Hazırla
+    bg = ImageClip(f"{assets}/arka plan.png").set_duration(DURATION).resize(width=1920)
     
-    # Karakteri ekrana yerleştir ve hareket ver
-    papi = papi.set_position(lambda t: ("center", 450 + 30 * math.sin(t * 3)))
+    # 2. Karakterleri "Temizlenmiş" ve Hareketli Olarak Ekle
+    # Not: Bu aşamada görsellerin PNG (şeffaf) olduğunu varsayıyoruz
+    papi = ImageClip(f"{assets}/papi.png").set_duration(DURATION).resize(height=400)
+    ahtapot = ImageClip(f"{assets}/ahtapot.png").set_duration(DURATION).resize(height=350)
 
-    # Birleştir ve kaydet
-    final = CompositeVideoClip([bg, papi]).set_audio(audio)
-    final.write_videofile("ilk_cizgi_filmim.mp4", fps=24, codec="libx264")
+    # Profesyonel Hareket Fonksiyonları (Yüzme Efekti)
+    papi_move = lambda t: (400 + 20 * math.sin(t), 600 + 10 * math.cos(t))
+    ahtapot_move = lambda t: (1100 + 15 * math.cos(t*0.5), 550 + 30 * math.sin(t))
+
+    papi = papi.set_position(papi_move)
+    ahtapot = ahtapot.set_position(ahtapot_move)
+
+    # 3. Profesyonel Seslendirmeyi Ekle
+    audio = AudioFileClip(f"{assets}/konusma.mp3")
     
-    print("✅ BAŞARILI! Video 'Summary' kısmında seni bekliyor.")
+    # Final Birleştirme
+    video = CompositeVideoClip([bg, papi, ahtapot]).set_audio(audio)
+    
+    print("🚀 Video işleniyor, lütfen bekleyin...")
+    video.write_videofile("Papi_Ve_Dostu_Final.mp4", fps=24, codec="libx264")
+    print("✨ Başardık! Final videosu hazır.")
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    create_pro_video()

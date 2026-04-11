@@ -1,24 +1,22 @@
+{/* Reason: Bu yapılandırma, sistemdeki FFmpeg eksikliğini gidererek render sürecini garanti altına alır. */}
 name: Otonom 4K Animasyon PRO
-on: 
-  workflow_dispatch: # Bu satır "Run Workflow" butonunu getirir
-  push:
-    branches: [ main ]
+on: [workflow_dispatch, push]
 
 jobs:
   render:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Sistem Hazirligi
+      - name: FFmpeg 4K Kurulumu
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg
-      - name: Paketleri Kur
+      - name: Python Paketleri
         run: pip install edge-tts requests
-      - name: 4K Render
+      - name: PRO Render Baslat
         run: python main.py
-      - name: Videoyu Yukle
+      - name: 4K Videoyu Klasore Yukle
         uses: actions/upload-artifact@v4
         with:
-          name: otonom-video-4k
-          path: final_animation_4k.mp4
+          name: otonom-final-4k
+          path: output_4k_final.mp4

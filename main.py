@@ -1,38 +1,41 @@
 import os
-import requests
 import subprocess
 
-def build_video():
-    # 1. Seslendirme (edge-tts)
-    text = "Selam Papi, Tori ve Fini! Sonunda butun hatalari giderdik ve animasyonumuz hazir!"
+def build_4k_animation():
+    print(">>> 4K Otonom Animasyon Basliyor...")
+
+    # 1. Seslendirme (Karakterlerin tanitimi)
+    text = "Selam! Ben Kaplumbaga Tori, yanimda Ahtapot Papi ve Balik Fini var. 4K dunyamiza hos geldiniz!"
     os.system(f'edge-tts --text "{text}" --voice tr-TR-EmelNeural --write-media voice.mp3')
 
-    # 2. Karakterleri Indir
-    links = {
-        "papi.png": "https://images.pngtree.com/png-clipart/20230913/original/pngtree-3d-orange-fish-png-image_20930822.png",
-        "tori.png": "https://png.pngtree.com/png-clipart/20230531/original/pngtree-3d-turtle-turtle-gradient-texture-ui-design-ux-material-png-image_14115622.png",
-        "fini.png": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRzY7B9Y6p7lH9-Pz9j8_Z6J8-R8E5t1-Pz9Q&s"
+    # 2. KARAKTERLERI KODLA YARAT (PNG dosyasi gerektirmez)
+    # Tori (Yesil), Papi (Turuncu), Fini (Mavi) karakterlerini temsil eden dinamik objeler
+    chars = {
+        "tori": "color=c=green:s=300x200",
+        "papi": "color=c=orange:s=250x250",
+        "fini": "color=c=dodgerblue:s=200x150"
     }
     
-    for filename, url in links.items():
-        try:
-            r = requests.get(url, timeout=10)
-            with open(filename, 'wb') as f: f.write(r.content)
-        except:
-            # Resim inmezse hata vermemesi icin bos bir renkli kutu olusturur
-            os.system(f"ffmpeg -f lavfi -i color=c=blue:s=100x100:d=1 -vframes 1 {filename}")
+    for name, cmd in chars.items():
+        os.system(f"ffmpeg -y -f lavfi -i {cmd}:d=1 -vframes 1 {name}.png")
 
-    # 3. FFmpeg Render (En hatasiz ve en hizli yontem)
-    cmd = (
-        "ffmpeg -y -f lavfi -i color=c=0x003366:s=720x1280:d=5 "
-        "-i papi.png -i tori.png -i fini.png -i voice.mp3 "
-        '-filter_complex "[1:v]scale=350:-1[p];[2:v]scale=350:-1[t];[3:v]scale=350:-1[f];'
-        '[0:v][p]overlay=(W-w)/2:250[bg1];[bg1][t]overlay=50:800[bg2];[bg2][f]overlay=320:800" '
-        "-c:v libx264 -pix_fmt yuv420p -c:a aac -shortest otonom_shorts.mp4"
+    # 3. 4K RENDER MOTORU (3840x2160)
+    # Karakterlere suyun altinda hareket (sine dalgasi) efekti ekler
+    ffmpeg_cmd = (
+        "ffmpeg -y -f lavfi -i color=c=0x001a33:s=3840x2160:d=10:r=60 " # 4K 60FPS Arka Plan
+        "-i tori.png -i papi.png -i fini.png -i voice.mp3 "
+        "-filter_complex "
+        "[1:v]format=rgba,geom=300x200[t];"
+        "[2:v]format=rgba,geom=250x250[p];"
+        "[3:v]format=rgba,geom=200x150[f];"
+        "[0:v][t]overlay=x='200+50*sin(t)':y='1500+20*cos(t)'[v1]; " # Tori hareketi
+        "[v1][p]overlay=x='1800+100*sin(t)':y='800+50*cos(t)'[v2]; "  # Papi hareketi
+        "[v2][f]overlay=x='3000+150*cos(t)':y='1600+80*sin(t)' "      # Fini hareketi
+        "-c:v libx264 -preset slow -crf 18 -pix_fmt yuv420p -c:a aac -shortest otonom_4k.mp4"
     )
-    
-    subprocess.run(cmd, shell=True)
-    print(">>> Islem tamamlandi, otonom_shorts.mp4 olusturuldu.")
+
+    subprocess.run(ffmpeg_cmd, shell=True)
+    print(">>> 4K VIDEO HAZIR: otonom_4k.mp4")
 
 if __name__ == "__main__":
-    build_video()
+    build_4k_animation()

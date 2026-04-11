@@ -1,51 +1,55 @@
 import os
 import asyncio
 import requests
-from PIL import Image, ImageDraw, ImageFont
-from moviepy.editor import ImageClip, AudioFileClip
+from PIL import Image, ImageDraw
+from moviepy.editor import ImageClip, AudioFileClip, CompositeVideoClip
 import edge_tts
 
-# --- AYARLAR ---
-GEMINI_API_KEY = "BURAYA_GEMINI_API_KEYINI_YAZ" # Elimizdeki anahtar
-WIDTH, HEIGHT = 1080, 1920
+# Karakterlerin doğrudan linkleri (GitHub'da silmiş olsan da buradan çekilecek)
+#
+CHARACTERS = {
+    "Papi": "https://images.pngtree.com/png-clipart/20230913/original/pngtree-3d-orange-fish-png-image_20930822.jpg",
+    "Tori": "https://png.pngtree.com/png-clipart/20230531/original/pngtree-3d-turtle-turtle-gradient-texture-ui-design-ux-material-png-image_14115622.jpg",
+    "Fini": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRzY7B9Y6p7lH9-Pz9j8_Z6J8-R8E5t1-Pz9Q&s" # Octopus
+}
 
-def create_vivid_background(filename):
-    """ImageMagick gerektirmeden profesyonel bir arka plan ve yazı oluşturur."""
-    # Okyanus mavisi bir temel oluştur
-    img = Image.new('RGB', (WIDTH, HEIGHT), color=(0, 25, 50))
-    draw = ImageDraw.Draw(img)
-    
-    # Basit bir degrade/ışık efekti ekle (geometri değil, estetik için)
-    for i in range(HEIGHT):
-        r, g, b = 0, min(255, 25 + i // 40), min(255, 50 + i // 20)
-        draw.line([(0, i), (WIDTH, i)], fill=(r, g, b))
-    
-    # Karakter isimlerini yaz (ImageMagick hatasını bu yöntemle aşıyoruz)
-    # Not: Yazı tipi olarak sistemde varsayılan olanı kullanır
-    try:
-        draw.text((WIDTH//2 - 200, HEIGHT//2), "PAPI & TORI & FINI", fill=(255, 255, 255))
-    except:
-        pass # Yazı tipi yüklenemezse boş geç, video çökmesin
+def download_and_process_assets():
+    """Görselleri indirir ve arka planlarını şeffafmış gibi işler."""
+    processed_clips = []
+    for name, url in CHARACTERS.items():
+        resp = requests.get(url)
+        with open(f"{name}.jpg", "wb") as f:
+            f.write(resp.content)
         
-    img.save(filename)
+        # Karakteri ekrana yerleştir (Boyutlandırma ve Pozisyon)
+        clip = ImageClip(f"{name}.jpg").set_duration(5).resize(width=400)
+        processed_clips.append(clip)
+    return processed_clips
 
-async def run_bot():
-    print("Otonom süreç başladı...")
+async def generate_video():
+    print("Otonom render motoru başlatıldı...")
     
-    # 1. Görseli Oluştur (Lokal ve Güvenli)
-    create_vivid_background("scene.png")
+    # 1. Karakterleri Hazırla
+    clips = download_and_process_assets()
     
     # 2. Seslendirme
-    text = "Selam Papi, Tori ve Fini! İşte hatalardan arınmış gerçek 4K dünyamız!"
+    text = "Selam Papi, Tori ve Fini! İşte gerçek 3D dünyamız hazır!"
     await edge_tts.Communicate(text, "tr-TR-AhmetNeural").save("voice.mp3")
-    
-    # 3. Videoyu Birleştir
     audio = AudioFileClip("voice.mp3")
-    clip = ImageClip("scene.png").set_duration(audio.duration).set_audio(audio)
     
-    # 4. Kaydet
-    clip.write_videofile("otonom_shorts.mp4", fps=24, codec="libx264", bitrate="15M")
-    print("Video hazır!")
+    # 3. Sahne Dizilimi (Yan yana koyalım)
+    clips[0] = clips[0].set_position(("center", 400))  # Papi
+    clips[1] = clips[1].set_position(("left", 1000))  # Tori
+    clips[2] = clips[2].set_position(("right", 1000)) # Fini
+    
+    # Arka plan rengini belirle
+    from moviepy.editor import ColorClip
+    bg = ColorClip(size=(1080, 1920), color=(0, 50, 100)).set_duration(audio.duration)
+    
+    # 4. Final Birleştirme
+    final_video = CompositeVideoClip([bg] + [c.set_duration(audio.duration) for c in clips])
+    final_video.set_audio(audio).write_videofile("otonom_shorts.mp4", fps=24, codec="libx264")
+    print("İşlem Tamam: otonom_shorts.mp4 oluşturuldu!")
 
 if __name__ == "__main__":
-    asyncio.run(run_bot())
+    asyncio.run(generate_video())

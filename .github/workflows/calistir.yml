@@ -1,3 +1,5 @@
+on:
+  workflow_dispatch:
 name: Tam Otonom Cizgi Film Botu - Senkronize Altyazi
 
 on:

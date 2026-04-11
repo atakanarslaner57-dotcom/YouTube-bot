@@ -5,59 +5,69 @@ from PIL import Image, ImageDraw
 from moviepy.editor import VideoClip, AudioFileClip, concatenate_audioclips
 import edge_tts
 
-# --- Çizim Motoru (Detaylı Karakterler) ---
-def ciz_papi(draw, x, y, t):
-    # Kollar (8 adet, kıvrımlı)
+# --- Karakterleri 'Canlı' Çizme Motoru ---
+def ciz_papi_detayli(draw, x, y, t):
+    # Kollar (Vantuzlu ve kıvrımlı)
     for i in range(8):
-        offset = i * (math.pi / 4)
-        ex = x + 100 * math.cos(offset + math.sin(t*3)*0.5)
-        ey = y + 100 * math.sin(offset + math.cos(t*3)*0.5)
-        draw.line([x, y, ex, ey], fill=(255, 80, 50), width=15)
-    # Kafa ve Gözler
-    draw.ellipse([x-60, y-70, x+60, y+50], fill=(255, 80, 50), outline="black")
-    draw.ellipse([x-30, y-40, x-10, y-20], fill="white") # Sol göz
-    draw.ellipse([x+10, y-40, x+30, y-20], fill="white") # Sağ göz
+        ang = i * (math.pi/4) + math.sin(t*2)*0.2
+        points = []
+        for d in range(5): # Kolu 5 parçada çizerek kıvırıyoruz
+            kx = x + (d*30) * math.cos(ang + math.sin(t*3+d)*0.3)
+            ky = y + (d*30) * math.sin(ang + math.cos(t*3+d)*0.3)
+            points.append((kx, ky))
+            # Vantuzlar
+            draw.ellipse([kx-4, ky-4, kx+4, ky+4], fill=(255, 150, 150))
+        draw.line(points, fill=(255, 80, 50), width=18-d*2)
+    # Kafa ve Yüz
+    draw.ellipse([x-60, y-80, x+60, y+40], fill=(255, 80, 50), outline=(150, 0, 0))
+    # Gözler (Canlı bakış)
+    for ex in [x-25, x+25]:
+        draw.ellipse([ex-15, y-30, ex+15, y], fill="white")
+        draw.ellipse([ex-5, y-20, ex+5, y-10], fill="black")
 
-def ciz_tori(draw, x, y, t):
-    salinim = 10 * math.sin(t*2)
-    # Ayaklar
-    for dx, dy in [(-80, 60), (80, 60), (-80, -20), (80, -20)]:
-        draw.ellipse([x+dx-20, y+dy+salinim, x+dx+20, y+dy+40+salinim], fill=(34, 100, 34))
-    # Kabuk (Desenli)
-    draw.ellipse([x-120, y-40+salinim, x+120, y+100+salinim], fill=(40, 150, 40), outline="black", width=3)
+def ciz_tori_detayli(draw, x, y, t):
+    s = 8 * math.sin(t*2)
+    # Yüzgeçler
+    for fx, fy in [(-90, 20), (90, 20)]:
+        draw.ellipse([x+fx-30, y+fy+s, x+fx+30, y+fy+20+s], fill=(46, 139, 87))
+    # Kabuk ve Desenler
+    draw.ellipse([x-130, y-50+s, x+130, y+110+s], fill=(107, 142, 35), outline="black")
+    for i in range(3): # Altıgen desenleri taklit et
+        draw.regular_polygon((x, y+30+s, 60-i*15), 6, rotation=30, outline=(50, 80, 20), width=2)
     # Kafa
-    draw.ellipse([x-40, y-80+salinim, x+40, y-20+salinim], fill=(50, 200, 50), outline="black")
+    draw.ellipse([x-35, y-90+s, x+35, y-20+s], fill=(144, 238, 144), outline="black")
 
 def make_frame(t):
-    img = Image.new("RGB", (1080, 1920), (0, 15, 40)) # Derin Deniz
+    # Derinlik efektli deniz
+    img = Image.new("RGB", (1080, 1920), (0, 25, 60))
     draw = ImageDraw.Draw(img)
     
-    # Arka plan baloncukları
-    for i in range(15):
-        bx = (i * 150 + t * 40) % 1080
-        by = (1800 - t * 120 - i * 100) % 1920
-        draw.ellipse([bx, by, bx+10, by+10], outline=(100, 100, 200))
+    # Hareketli Mercanlar (Arka Plan Yaşamı)
+    for i in range(6):
+        h = 180 + 60 * math.sin(t + i)
+        draw.chord([i*180, 1920-h, i*180+200, 1920+100], 0, 180, fill=(200, 80, 120))
 
-    # Karakterleri yerleştir
-    ciz_papi(draw, 540 + 30*math.sin(t), 600 + 20*math.cos(t), t)
-    ciz_tori(draw, 540, 1400, t)
+    # Karakterler
+    ciz_papi_detayli(draw, 540 + 40*math.sin(t), 700 + 30*math.cos(t), t)
+    ciz_tori_detayli(draw, 540, 1450, t)
     
     return np.array(img)
 
-async def uret():
+async def uret_shorts():
+    # Seslendirme (Daha vurgulu ve karakter bazlı)
     diyaloglar = [
-        ("tr-TR-AhmetNeural", "Tori, bak! Artik cok daha detayli ve canli gorunuyoruz!", "+15Hz"),
-        ("tr-TR-EmelNeural", "Evet Papi, sonunda gercek birer karaktere donustuk.", "-10Hz")
+        ("tr-TR-AhmetNeural", "Bak Tori! Sonunda kollarimda vantuzlarim, senin kabugunda desenlerin var!", "+15Hz"),
+        ("tr-TR-EmelNeural", "Evet Papi, simdi gercekten okyanusun bir parcasi gibi hissettim.", "-12Hz")
     ]
-    klipler = []
+    clips = []
     for i, (ses, metin, perde) in enumerate(diyaloglar):
-        path = f"s_{i}.mp3"
-        await edge_tts.Communicate(metin, ses, pitch=perde).save(path)
-        klipler.append(AudioFileClip(path))
+        p = f"s_{i}.mp3"
+        await edge_tts.Communicate(metin, ses, pitch=perde).save(p)
+        clips.append(AudioFileClip(p))
     
-    audio = concatenate_audioclips(klipler)
+    audio = concatenate_audioclips(clips)
     video = VideoClip(make_frame, duration=audio.duration).set_audio(audio)
     video.write_videofile("otonom_shorts.mp4", fps=24, codec="libx264")
 
 if __name__ == "__main__":
-    asyncio.run(uret())
+    asyncio.run(uret_shorts())

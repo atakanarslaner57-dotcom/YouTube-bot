@@ -1,29 +1,21 @@
-name: Tam Otonom Cizgi Film Botu 4K
-on: 
-  workflow_dispatch: # Manuel çalıştırma düğmesini ekler
-  push:
-    branches: [ main ]
+name: Otonom 4K Cizgi Film Botu
+on: [workflow_dispatch, push]
 
 jobs:
   render:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
-      - name: FFmpeg ve Sistem Paketlerini Kur
+      - name: Sistem Kurulumu (FFmpeg 4K Destegi)
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg
-      
-      - name: Python Kur ve Paketleri Yukle
-        run: |
-          pip install edge-tts requests
-
-      - name: Videoyu Uret
+      - name: Python Paketleri
+        run: pip install edge-tts
+      - name: 4K Render Al
         run: python main.py
-
-      - name: Videoyu Klasore Yukle
+      - name: Videoyu Yukle
         uses: actions/upload-artifact@v4
         with:
-          name: animasyon-video
-          path: otonom_shorts.mp4
+          name: otonom-4k-animasyon
+          path: otonom_4k.mp4

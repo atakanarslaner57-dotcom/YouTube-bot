@@ -1,20 +1,24 @@
 name: Tam Otonom Cizgi Film Botu 4K
-
-on:
-  workflow_dispatch:
+on: [push]
 
 jobs:
   render:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      
+      - name: Python Kur
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
-      - name: Paketleri Kur
+      - name: FFmpeg ve Sistem Paketlerini Kur
         run: |
-          pip install moviepy==1.0.3 edge-tts Pillow numpy
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+      
+      - name: Gereksinimleri Kur
+        run: pip install requests edge-tts moviepy
 
       - name: Videoyu Uret
         run: python main.py
@@ -22,5 +26,5 @@ jobs:
       - name: Videoyu Klasore Yukle
         uses: actions/upload-artifact@v4
         with:
-          name: otonom-video-sonuc
-          path: otonom_shorts.mp4 # main.py'deki OUTPUT_NAME ile tam eşleşmeli!
+          name: animasyon-video
+          path: otonom_shorts.mp4

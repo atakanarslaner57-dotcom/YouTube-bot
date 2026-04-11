@@ -1,7 +1,7 @@
 name: YouTube Video Botu
 
 on:
-  workflow_dispatch: # Manuel tetikleme için
+  workflow_dispatch:
 
 jobs:
   build:
@@ -19,10 +19,11 @@ jobs:
       - name: Sistem ve Python Araçlarını Yükleyin
         run: |
           sudo apt-get update
-          sudo apt-get install -y ffmpeg
+          # AVIF desteği için sistem kütüphanelerini kuruyoruz
+          sudo apt-get install -y ffmpeg libavif-bin
           python -m pip install --upgrade pip
-          # KRİTİK: Pillow sürümünü sabitleyerek hatayı çözüyoruz
-          pip install Pillow==9.5.0
+          # AVIF desteği sağlayan özel eklentiyi ve uyumlu Pillow sürümünü kuruyoruz
+          pip install Pillow==9.5.0 pillow-avif-plugin
           pip install moviepy==1.0.3 edge-tts requests
 
       - name: Botu Çalıştır

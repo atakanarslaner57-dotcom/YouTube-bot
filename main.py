@@ -1,58 +1,59 @@
 import os
 import asyncio
-import math
-import numpy as np
-from moviepy.editor import ImageClip, CompositeVideoClip, AudioFileClip
-from rembg import remove
-from PIL import Image
 import edge_tts
+from moviepy.editor import ImageClip, CompositeVideoClip, AudioFileClip, concatenate_audioclips
+
+# --- AYARLAR ---
+SHORTS_SIZE = (1080, 1920)
+FPS = 24
+
+# Karakter Ses Tanımlamaları (Çizgi film ruhuna uygun tonlar)
+CHARACTERS = {
+    "Papi": {"voice": "tr-TR-AhmetNeural", "pitch": "+10Hz", "rate": "+10%"}, # Enerjik/Tiz
+    "Tori": {"voice": "tr-TR-EmelNeural", "pitch": "-5Hz", "rate": "-5%"}    # Sakin/Bilge
+}
+
+async def generate_voice(text, char_name, filename):
+    cfg = CHARACTERS[char_name]
+    communicate = edge_tts.Communicate(text, cfg["voice"], pitch=cfg["pitch"], rate=cfg["rate"])
+    await communicate.save(filename)
 
 async def main():
-    assets_dir = "assets"
+    print("🚀 Otonom Çizgi Film Üretimi Başladı...")
     
-    def clean_image(name):
-        """Arka planı otomatik siler ve şeffaf PNG yapar"""
-        files = os.listdir(assets_dir)
-        target = next((f for f in files if name in f.lower()), None)
-        if target:
-            input_path = os.path.join(assets_dir, target)
-            output_path = f"cleaned_{name}.png"
-            with open(input_path, 'rb') as i:
-                input_data = i.read()
-                output_data = remove(input_data)
-                with open(output_path, 'wb') as o:
-                    o.write(output_data)
-            return output_path
-        return None
+    # 1. SENARYO VE SESLENDİRME
+    script = [
+        ("Papi", "Hey Tori! Şu dikey dünyaya bak, her şey ne kadar uzun görünüyor!"),
+        ("Tori", "Haklısın Papi. Ama endişelenme, kabuğum hala her yere sığıyor."),
+        ("Papi", "O zaman hadi, Shorts izleyenlere küçük bir su altı dansı gösterelim!")
+    ]
 
-    print("🖋️ Görseller temizleniyor...")
-    papi_path = clean_image("papi")
-    ahtapot_path = clean_image("tori") # tori veya ahtapot
-    bg_file = next((f for f in os.listdir(assets_dir) if "arka" in f.lower() or "back" in f.lower()), None)
+    audio_clips = []
+    for i, (char, text) in enumerate(script):
+        fname = f"voice_{i}.mp3"
+        await generate_voice(text, char, fname)
+        audio_clips.append(AudioFileClip(fname))
 
-    # Seslendirme (Doğal Ses)
-    print("🎙️ Ses hazırlanıyor...")
-    text = "Selam dostlar! Ben Kaplumbağa Papi. Sonunda o teknik sorunları aştık. Yanımda dostum Ahtapot ile denizin en derin, en mavi yerindeyiz. Dostluk, zorlukları beraber aşmaktır!"
-    communicate = edge_tts.Communicate(text, "tr-TR-AhmetNeural")
-    await communicate.save("ses.mp3")
-    audio = AudioFileClip("ses.mp3")
+    final_audio = concatenate_audioclips(audio_clips)
+    final_audio.write_audiofile("final_audio.mp3")
 
-    # Kurgu
-    bg = ImageClip(os.path.join(assets_dir, bg_file)).set_duration(40).resize(width=1920)
+    # 2. GÖRSEL KURGU (Bot burada mevcut assets klasörünü kullanır)
+    # Not: Görsel üretim araçlarını (DALL-E vb.) API ile bağlamadıysan, 
+    # bot 'assets' içindeki en uygun resimleri seçip dikey formata adapte eder.
     
-    papi = ImageClip(papi_path).set_duration(40).resize(height=450)
-    papi = papi.set_position(lambda t: (300 + 20 * math.sin(t), 650 + 10 * math.cos(t)))
+    bg = ImageClip("assets/arka_plan.png").set_duration(final_audio.duration).resize(height=1920)
+    
+    # Karakterleri sahneye yerleştirme (Dikey Merkeze Odaklı)
+    papi = ImageClip("assets/papi.png").set_duration(final_audio.duration).resize(width=600)
+    papi = papi.set_position(('center', 800))
+    
+    tori = ImageClip("assets/tori.png").set_duration(final_audio.duration).resize(width=500)
+    tori = tori.set_position(('center', 1300))
 
-    katmanlar = [bg, papi]
-
-    if ahtapot_path:
-        ahtapot = ImageClip(ahtapot_path).set_duration(40).resize(height=400)
-        ahtapot = ahtapot.set_position(lambda t: (1200, 550 + 25 * math.sin(t * 1.5)))
-        katmanlar.append(ahtapot)
-
-    final = CompositeVideoClip(katmanlar).set_audio(audio)
-    final.write_videofile("ilk_cizgi_filmim.mp4", fps=24)
-    print("✨ İşlem Tamam! Arka planlar silindi, ses eklendi.")
+    # 3. BİRLEŞTİRME
+    video = CompositeVideoClip([bg, papi, tori], size=SHORTS_SIZE).set_audio(final_audio)
+    video.write_videofile("otonom_shorts.mp4", fps=FPS, codec="libx264")
+    print("✨ İşlem Tamam! Dikey Shorts videon hazır.")
 
 if __name__ == "__main__":
     asyncio.run(main())

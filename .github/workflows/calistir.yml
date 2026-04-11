@@ -1,7 +1,7 @@
 name: YouTube Video Botu
 
 on:
-  workflow_dispatch:
+  workflow_dispatch: # Manuel tetikleme için
 
 jobs:
   build:
@@ -11,15 +11,18 @@ jobs:
       - name: Kodları Çek
         uses: actions/checkout@v4
 
-      - name: Python Kurulumu
+      - name: Python Kur
         uses: actions/setup-python@v5
         with:
           python-version: '3.9'
 
-      - name: Kütüphaneleri Zorla Yükle
+      - name: Sistem ve Python Araçlarını Yükleyin
         run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
           python -m pip install --upgrade pip
-          # Hem dosyadan hem manuel olarak kütüphaneleri kuruyoruz
+          # KRİTİK: Pillow sürümünü sabitleyerek hatayı çözüyoruz
+          pip install Pillow==9.5.0
           pip install moviepy==1.0.3 edge-tts requests
 
       - name: Botu Çalıştır

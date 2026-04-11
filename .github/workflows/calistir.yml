@@ -1,4 +1,5 @@
-name: Otonom 4K Animasyon PRO
+{/* Reason: Bu yapılandırma, hem yüksek kaliteli ses (edge-tts) hem de görsel işleme (Pillow) paketlerini yükleyerek 4K render için gerekli zemini sağlar. */}
+name: Otonom 3D Cizgi Film PRO
 on: [workflow_dispatch, push]
 
 jobs:
@@ -6,16 +7,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: FFmpeg 4K Kurulumu
+      - name: FFmpeg ve Sistem Paketleri
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg
       - name: Python Paketleri
-        run: pip install edge-tts
-      - name: PRO Render Baslat
+        run: pip install edge-tts Pillow requests
+      - name: 4K Render Baslat
         run: python main.py
-      - name: 4K Videoyu Yukle
+      - name: Videoyu Yukle
         uses: actions/upload-artifact@v4
         with:
-          name: otonom-final-4k
-          path: output_4k.mp4
+          name: otonom-final-3d
+          path: output_final.mp4

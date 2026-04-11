@@ -6,7 +6,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Kodları Çek
         uses: actions/checkout@v4
@@ -16,21 +15,16 @@ jobs:
         with:
           python-version: '3.9'
 
-      - name: Sistem ve Python Araçlarını Yükleyin
+      - name: Gerekli Araçları Yükle
         run: |
-          sudo apt-get update
-          # AVIF desteği için sistem kütüphanelerini kuruyoruz
-          sudo apt-get install -y ffmpeg libavif-bin
           python -m pip install --upgrade pip
-          # AVIF desteği sağlayan özel eklentiyi ve uyumlu Pillow sürümünü kuruyoruz
-          pip install Pillow==9.5.0 pillow-avif-plugin
-          pip install moviepy==1.0.3 edge-tts requests
+          pip install moviepy edge-tts Pillow
 
       - name: Botu Çalıştır
         run: python main.py
 
-      - name: Videoyu Kaydet
+      - name: Videoyu Sisteme Kaydet
         uses: actions/upload-artifact@v4
         with:
-          name: cizgi-film-videosu
+          name: Papi-Final-Video
           path: ilk_cizgi_filmim.mp4
